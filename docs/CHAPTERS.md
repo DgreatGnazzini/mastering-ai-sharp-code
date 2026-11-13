@@ -27,6 +27,7 @@ Rules:
 
 | Tag | README |
 |---|---|
+| `ch01` | [docs/chapters/ch01.md](chapters/ch01.md) |
 | `ch02` | [docs/chapters/ch02.md](chapters/ch02.md) |
 | `ch03` | [docs/chapters/ch03.md](chapters/ch03.md) |
 | `ch07` | [docs/chapters/ch07.md](chapters/ch07.md) |
