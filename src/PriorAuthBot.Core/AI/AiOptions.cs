@@ -55,6 +55,13 @@ public sealed class OllamaOptions
     public string VisionModel { get; set; } = "qwen2.5vl:3b";
 
     /// <summary>
+    /// Context window for the vision model, in tokens. Ollama defaults to 4,096, and a full scanned
+    /// page at 200 dpi is about 4,100 image tokens on its own, so the request is refused before the
+    /// model reads anything. 8,192 leaves room for the page, the instructions and the transcription.
+    /// </summary>
+    public int VisionContextLength { get; set; } = 8192;
+
+    /// <summary>
     /// Local models on a CPU can take minutes to read a long prompt. HttpClient's default of
     /// 100 seconds is too short for that, so the timeout is configurable.
     /// </summary>

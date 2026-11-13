@@ -73,6 +73,35 @@ public class AiServiceCollectionTests
         Assert.Equal("qwen2.5vl:3b", vision?.DefaultModelId);
     }
 
+    [Fact]
+    public async Task VisionAsksOllamaForALargerContextWindow()
+    {
+        // A stand-in for Ollama that records the request body and answers with one finished message.
+        using var listener = new System.Net.HttpListener();
+        var port = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Max(e => e.Port) + 1;
+        var prefix = $"http://localhost:{port}/";
+        listener.Prefixes.Add(prefix);
+        listener.Start();
+        var body = Task.Run(async () =>
+        {
+            var context = await listener.GetContextAsync();
+            using var reader = new StreamReader(context.Request.InputStream);
+            var request = await reader.ReadToEndAsync();
+            var reply = """{"model":"qwen2.5vl:3b","created_at":"2026-01-01T00:00:00Z","message":{"role":"assistant","content":"ok"},"done":true}""" + "\n";
+            var bytes = System.Text.Encoding.UTF8.GetBytes(reply);
+            context.Response.ContentType = "application/x-ndjson";
+            await context.Response.OutputStream.WriteAsync(bytes);
+            context.Response.Close();
+            return request;
+        }, TestContext.Current.CancellationToken);
+
+        using var services = Build(new() { ["AI:Provider"] = "Ollama", ["AI:Ollama:Endpoint"] = prefix });
+        var vision = services.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.VisionKey);
+        await vision.GetResponseAsync("Read this.", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"num_ctx\":8192", (await body).Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("Ollama", null, false)]
     [InlineData("OpenAI", null, true)]

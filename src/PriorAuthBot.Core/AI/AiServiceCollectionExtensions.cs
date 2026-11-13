@@ -102,6 +102,9 @@ public static class AiServiceCollectionExtensions
             "OpenAI" => CreateOpenAI(options.OpenAI)
                 .GetChatClient(Pick(purpose, options.OpenAI.ClassifierModel, options.OpenAI.VisionModel, options.OpenAI.ChatModel))
                 .AsIChatClient(),
+            "Ollama" when purpose == Purpose.Vision => WithContextLength(
+                CreateOllama(options.Ollama, Pick(purpose, options.Ollama.ClassifierModel, options.Ollama.VisionModel, options.Ollama.ChatModel)),
+                options.Ollama.VisionContextLength),
             "Ollama" => CreateOllama(options.Ollama, Pick(purpose, options.Ollama.ClassifierModel, options.Ollama.VisionModel, options.Ollama.ChatModel)),
             _ => throw new InvalidOperationException($"Unknown AI provider '{options.Provider}'."),
         };
@@ -150,6 +153,15 @@ public static class AiServiceCollectionExtensions
         options.RetryPolicy = new ClientRetryPolicy(maxRetries: 0);
         return options;
     }
+
+    /// <summary>
+    /// Ollama reads its context window from the request's options as <c>num_ctx</c>. Images are
+    /// expensive in tokens, so the vision client asks for a larger window than Ollama's default.
+    /// </summary>
+    private static IChatClient WithContextLength(IChatClient client, int contextLength) =>
+        client.AsBuilder()
+            .ConfigureOptions(o => (o.AdditionalProperties ??= [])["num_ctx"] = contextLength)
+            .Build();
 
     private static OllamaApiClient CreateOllama(OllamaOptions options, string model) =>
         new(new HttpClient { BaseAddress = options.Endpoint, Timeout = options.Timeout }, model);
