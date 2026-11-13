@@ -9,6 +9,8 @@
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Prompts\Templates\*.md;Prompts\Templates\*.json" LogicalName="PriorAuthBot.Core.Prompts.Templates.%(Filename)%(Extension)" />

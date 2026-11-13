@@ -19,7 +19,7 @@ public static class PriorAuthBotServiceCollectionExtensions
         services.AddPriorAuthBotVectorStore(configuration);
 
         services.AddSingleton<TokenCounter>();
-        services.AddSingleton<QuestionClassifier>();
+        services.AddSingleton(sp => new QuestionClassifier(sp.GetRequiredKeyedService<Microsoft.Extensions.AI.IChatClient>(AiServiceCollectionExtensions.ClassifierKey)));
 
         services.AddOptions<ChunkingOptions>().Bind(configuration.GetSection(ChunkingOptions.SectionName));
         services.AddSingleton<IChunker>(sp => new StructuralChunker(

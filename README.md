@@ -20,7 +20,7 @@ git diff ch06 ch07  # exactly what chapter 7 adds
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (pinned in `global.json`)
-- One model provider: Azure OpenAI, OpenAI, or [Ollama](https://ollama.com) for free local models
+- One model provider: Azure OpenAI (signed in with Entra ID), OpenAI, or [Ollama](https://ollama.com) for free local models
 - Docker or Podman, for PostgreSQL with pgvector and Ollama (`compose.yaml`; chapter 1 moves this to a .NET Aspire AppHost)
 
 ## Build and test
@@ -53,13 +53,19 @@ curl -X POST http://localhost:5080/ask -H "X-Demo-User: nurse" -H "Content-Type:
 curl -X POST http://localhost:5080/ask -H "X-Demo-User: contractor" -H "Content-Type: application/json" -d '{"question":"Can I work remotely?"}'
 ```
 
+Chat with the model directly, streamed as server-sent events (chapter 2):
+
+```bash
+curl -N -X POST http://localhost:5080/chat -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"message":"What is prior authorization?"}'
+```
+
 Classify a question into department, sensitivity, and a PHI flag (chapter 3):
 
 ```bash
 curl -X POST http://localhost:5080/classify -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"How many PTO days do I get?"}'
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. See [docs/chapters/ch07.md](docs/chapters/ch07.md) for pgvector and OpenAI.
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch07.md](docs/chapters/ch07.md) for pgvector and OpenAI.
 
 ## Configuration and secrets
 
