@@ -45,7 +45,8 @@ public sealed class StructuralChunker(TokenCounter tokens, ChunkingOptions optio
             var level = HeadingLevel(line);
             if (level == 0)
             {
-                body.AppendLine(line);
+                // Always '\n', never Environment.NewLine: paragraph splitting below looks for "\n\n".
+                body.Append(line).Append('\n');
                 continue;
             }
 
