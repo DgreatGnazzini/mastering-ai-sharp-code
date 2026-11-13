@@ -14,6 +14,12 @@ internal static class LiveSettings
 
     public static string ChatModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_CHAT_MODEL") ?? "llama3.2:3b";
 
+    /// <summary>
+    /// The model that grades groundedness. A judge must follow the evaluator's output format
+    /// exactly, which small models often fail to do, so it can be larger than the chat model.
+    /// </summary>
+    public static string JudgeModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_JUDGE_MODEL") ?? ChatModel;
+
     public static string EmbeddingModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_EMBEDDING_MODEL") ?? "nomic-embed-text:v1.5";
 
     /// <summary>Folder for reports (chunking table, groundedness scores) that CI uploads as artifacts.</summary>

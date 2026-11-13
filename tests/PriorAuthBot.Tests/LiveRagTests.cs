@@ -36,7 +36,9 @@ public sealed class LiveRagTests(ITestOutputHelper output)
         var retriever = host.Get<SecureRetriever>();
         var assembler = host.Get<ContextAssembler>();
         var rag = host.Get<RagAnswerService>();
-        var judge = new ChatConfiguration(host.Get<IChatClient>());
+        using var judgeClient = new OllamaSharp.OllamaApiClient(
+            new HttpClient { BaseAddress = new Uri(LiveSettings.Ollama!), Timeout = TimeSpan.FromMinutes(10) }, LiveSettings.JudgeModel);
+        var judge = new ChatConfiguration(judgeClient);
         var evaluator = new GroundednessEvaluator();
 
         var failures = new List<string>();
@@ -94,6 +96,10 @@ public sealed class LiveRagTests(ITestOutputHelper output)
                         groundedness.Add(value);
                         score = value.ToString("0", CultureInfo.InvariantCulture);
                     }
+                    else
+                    {
+                        output.WriteLine($"{goldenCase.Id}: judge gave no score. {string.Join(" | ", metric.Diagnostics?.Select(d => d.Message) ?? [])}");
+                    }
                 }
             }
 
@@ -103,7 +109,7 @@ public sealed class LiveRagTests(ITestOutputHelper output)
         }
 
         var average = groundedness.Count > 0 ? groundedness.Average() : 0;
-        report.Append(CultureInfo.InvariantCulture, $"\nAverage groundedness: {average:0.00} over {groundedness.Count} answers. Answers containing the expected fact: {containsExpected}/{answerable}.\n");
+        report.Append(CultureInfo.InvariantCulture, $"\nJudge: {LiveSettings.JudgeModel}. Average groundedness: {average:0.00} over {groundedness.Count} answers. Answers containing the expected fact: {containsExpected}/{answerable}.\n");
         await File.WriteAllTextAsync(Path.Combine(LiveSettings.ReportDirectory, "golden-set-ollama.md"), report.ToString(), ct);
         output.WriteLine(report.ToString());
 
