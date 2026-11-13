@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['ch[0-9][0-9]', 'ch[0-9][0-9]-r*', 'final']
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Nightly run against the pinned versions catches newly published vulnerabilities.
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore MasteringAI.slnx
+
+      - name: Build
+        run: dotnet build MasteringAI.slnx --configuration Release --no-restore
+
+      - name: Test
+        # Tests that call a real model are marked [Trait("Category", "Live")] and are skipped in CI.
+        run: dotnet test --solution MasteringAI.slnx --configuration Release --no-build
+
+      - name: Check for vulnerable packages
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          dotnet list MasteringAI.slnx package --vulnerable --include-transitive | tee vuln.txt
+          if grep -q -E "Critical|High|Moderate|Low" vuln.txt; then
+            echo "::error::Vulnerable packages found"; exit 1
+          fi

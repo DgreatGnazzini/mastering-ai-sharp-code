@@ -1,0 +1,37 @@
+name: Latest packages
+
+# Weekly canary: builds and tests against the newest published version of every pinned package,
+# so an upstream API change shows up here before a reader finds it. Never commits anything.
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Bump every pinned package to its latest version
+        run: python3 scripts/bump-packages.py Directory.Packages.props
+
+      - name: Show what changed
+        run: git diff Directory.Packages.props
+
+      - name: Build
+        run: dotnet build MasteringAI.slnx --configuration Release
+
+      - name: Test
+        run: dotnet test --solution MasteringAI.slnx --configuration Release --no-build
