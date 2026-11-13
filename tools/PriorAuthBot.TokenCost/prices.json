@@ -1,0 +1,9 @@
+{
+  "note": "Example list prices in US dollars per million tokens: OpenAI's published prices when GPT-4.1 launched (April 2025). Azure OpenAI and OpenAI prices change, differ by region and deployment type, and may be discounted. Replace these with your own price sheet before you budget.",
+  "models": [
+    { "model": "gpt-4.1", "inputPerMillion": 2.00, "outputPerMillion": 8.00 },
+    { "model": "gpt-4.1-mini", "inputPerMillion": 0.40, "outputPerMillion": 1.60 },
+    { "model": "gpt-4.1-nano", "inputPerMillion": 0.10, "outputPerMillion": 0.40 },
+    { "model": "llama3.2:3b (Ollama, local)", "inputPerMillion": 0, "outputPerMillion": 0 }
+  ]
+}

@@ -18,6 +18,11 @@
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="3.0.0" />
   </ItemGroup>
+  <ItemGroup Label="Local development with .NET Aspire (ch01)">
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
+  </ItemGroup>
   <ItemGroup Label="Vector data and retrieval (ch05-ch08)">
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="11.0.0" />
     <!--

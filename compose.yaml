@@ -1,5 +1,6 @@
 # Local infrastructure for PriorAuthBot: PostgreSQL with pgvector, and Ollama for local models.
-# Nothing here leaves your machine. Chapter 1 replaces this file with a .NET Aspire AppHost.
+# Nothing here leaves your machine. The .NET Aspire AppHost (src/PriorAuthBot.AppHost, chapter 1)
+# runs the same containers and the API together; this file is for readers without Aspire.
 #
 #   docker compose up -d
 #   docker compose exec ollama ollama pull nomic-embed-text:v1.5

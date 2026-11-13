@@ -1,0 +1,31 @@
+// PriorAuthBot's local environment (chapter 1). Everything runs on your machine: no cloud
+// account, no keys. The Aspire dashboard shows the containers, the API, and their logs.
+var builder = DistributedApplication.CreateBuilder(args);
+
+// PostgreSQL with the pgvector extension, for the vector store from chapter 6 on.
+var postgres = builder.AddPostgres("postgres")
+    .WithImage("pgvector/pgvector", "0.8.7-pg17-trixie")
+    // Create the application database at first start, so the init script enables pgvector in it.
+    .WithEnvironment("POSTGRES_DB", "priorauthbot")
+    .WithBindMount("../../scripts/init-pgvector.sql", "/docker-entrypoint-initdb.d/init-pgvector.sql", isReadOnly: true)
+    .WithDataVolume()
+    .WithLifetime(ContainerLifetime.Persistent);
+var database = postgres.AddDatabase("priorauthbot");
+
+// Ollama with the two models the book uses. The first run downloads about 2.3 GB.
+var ollama = builder.AddOllama("ollama")
+    .WithImageTag("0.40.16")
+    .WithDataVolume()
+    .WithLifetime(ContainerLifetime.Persistent);
+var chatModel = ollama.AddModel("chat", "llama3.2:3b");
+var embeddingModel = ollama.AddModel("embedding", "nomic-embed-text:v1.5");
+
+builder.AddProject<Projects.PriorAuthBot_Api>("api")
+    .WithReference(database)
+    .WaitFor(database)
+    .WaitFor(chatModel)
+    .WaitFor(embeddingModel)
+    .WithEnvironment("AI__Provider", "Ollama")
+    .WithEnvironment("AI__Ollama__Endpoint", ollama.GetEndpoint("http"));
+
+builder.Build().Run();

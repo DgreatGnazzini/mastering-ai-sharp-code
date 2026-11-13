@@ -21,7 +21,7 @@ git diff ch06 ch07  # exactly what chapter 7 adds
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (pinned in `global.json`)
 - One model provider: Azure OpenAI (signed in with Entra ID), OpenAI, or [Ollama](https://ollama.com) for free local models
-- Docker or Podman, for PostgreSQL with pgvector and Ollama (`compose.yaml`; chapter 1 moves this to a .NET Aspire AppHost)
+- Docker or Podman, for PostgreSQL with pgvector and Ollama (run by the .NET Aspire AppHost, or `compose.yaml`)
 
 ## Build and test
 
@@ -38,6 +38,14 @@ The tests need no model, database, or network: they use an offline embedder and 
 | `PRIORAUTHBOT_TEST_OLLAMA` | The golden set, groundedness check, and chunking experiment against Ollama |
 
 ## Run PriorAuthBot locally
+
+With Docker or Podman running, start everything (PostgreSQL with pgvector, Ollama with the models, and the API) from the .NET Aspire AppHost:
+
+```bash
+dotnet run --project src/PriorAuthBot.AppHost
+```
+
+Without Aspire, start the containers with Compose and run the API yourself:
 
 ```bash
 docker compose up -d
@@ -82,6 +90,8 @@ dotnet user-secrets set "AI:OpenAI:ApiKey" "<your-key>"
 |---|---|
 | `src/PriorAuthBot.Api` | ASP.NET Core host for the assistant |
 | `src/PriorAuthBot.Core` | Chat, retrieval, security, and evaluation logic |
+| `src/PriorAuthBot.AppHost` | .NET Aspire AppHost: local containers and the API |
+| `tools/PriorAuthBot.TokenCost` | Token and cost calculator (chapter 1) |
 | `docs/chapters/` | A short README per chapter: what it adds and how to run it |
 | `tests/PriorAuthBot.Tests` | Unit and regression tests |
 | `samples/documents` | Deductible Dynamics' fictional policies, protocols, and procedures |
