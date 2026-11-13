@@ -114,6 +114,14 @@ jobs:
 
       # Installed on the runner rather than as a service container: in a container on the hosted
       # runner, Ollama ran inference on a single thread and every answer took minutes.
+      # Four models need about 11 GB, more than the hosted runner has free by default. When the disk
+      # filled, the runner itself died partway through the golden set and left no logs.
+      - name: Free disk space for the models
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
+          df -h /
+
       - name: Install Ollama and pull the models
         run: |
           curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
@@ -125,6 +133,8 @@ jobs:
           ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_JUDGE_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_VISION_MODEL"
+          df -h /
+          free -h
 
       - name: Run the golden set and the groundedness check
         run: >-
