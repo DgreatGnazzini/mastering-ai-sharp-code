@@ -69,3 +69,15 @@ public class StructuredOutputTests
     private static ChatResponse<QuestionIntent> Response(string text) =>
         new(new ChatResponse(new ChatMessage(ChatRole.Assistant, text)), StructuredOutput.SerializerOptions);
 }
+
+/// <summary>Why StructuredOutput.SerializerOptions exists: with the defaults, an empty reply is a valid, harmless-looking intent.</summary>
+public class DefaultSerializerTests
+{
+    [Fact]
+    public void DefaultOptionsTurnEmptyObjectIntoPublic()
+    {
+        var response = new ChatResponse<QuestionIntent>(new ChatResponse(new ChatMessage(ChatRole.Assistant, "{}")), AIJsonUtilities.DefaultOptions);
+
+        Assert.Equal(new QuestionIntent(Department.AllStaff, Sensitivity.Public, false), response.Result);
+    }
+}

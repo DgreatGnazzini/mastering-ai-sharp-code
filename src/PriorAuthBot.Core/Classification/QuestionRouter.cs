@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace PriorAuthBot.Core.Classification;
 
+[JsonConverter(typeof(JsonStringEnumConverter<RouteAction>))]
 public enum RouteAction
 {
     /// <summary>PriorAuthBot answers from the documents the caller can see.</summary>
