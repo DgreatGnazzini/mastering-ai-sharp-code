@@ -53,6 +53,12 @@ curl -X POST http://localhost:5080/ask -H "X-Demo-User: nurse" -H "Content-Type:
 curl -X POST http://localhost:5080/ask -H "X-Demo-User: contractor" -H "Content-Type: application/json" -d '{"question":"Can I work remotely?"}'
 ```
 
+Classify a question into department, sensitivity, and a PHI flag (chapter 3):
+
+```bash
+curl -X POST http://localhost:5080/classify -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"How many PTO days do I get?"}'
+```
+
 No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. See [docs/chapters/ch07.md](docs/chapters/ch07.md) for pgvector and OpenAI.
 
 ## Configuration and secrets

@@ -89,7 +89,8 @@ jobs:
 
   rag-eval:
     # Chapter 7: the golden set against a real local model (Ollama), plus one groundedness check
-    # with Microsoft.Extensions.AI.Evaluation. CPU only, so it takes several minutes.
+    # with Microsoft.Extensions.AI.Evaluation. Chapter 3: the labeled classification questions.
+    # CPU only, so it takes several minutes.
     name: RAG eval (golden set on Ollama)
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -126,6 +127,12 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveRagTests" --output Detailed
+
+      - name: Classify the labeled questions (chapter 3)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveClassifierTests" --output Detailed
 
       - name: Add the reports to the job summary
         if: always()

@@ -23,10 +23,13 @@ internal sealed class RecordingChatClient(Func<IReadOnlyList<ChatMessage>, strin
 {
     public List<IReadOnlyList<ChatMessage>> Requests { get; } = [];
 
+    public List<ChatOptions?> Options { get; } = [];
+
     public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var list = messages.ToList();
         Requests.Add(list);
+        Options.Add(options);
         return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, reply(list))));
     }
 
