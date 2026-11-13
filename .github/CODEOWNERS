@@ -1,0 +1,4 @@
+# Prompts and their approved snapshots change only with a review from the prompt owners (chapter 3).
+# Replace the owner with your own team, such as @your-org/ai-prompt-owners.
+/src/PriorAuthBot.Core/Prompts/ @DgreatGnazzini
+/tests/PriorAuthBot.Tests/Snapshots/ @DgreatGnazzini

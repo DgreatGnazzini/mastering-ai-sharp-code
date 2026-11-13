@@ -5,6 +5,8 @@ using PriorAuthBot.Api;
 using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Api.Ingestion;
 using PriorAuthBot.Core;
+using PriorAuthBot.Core.AI;
+using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Rag;
 using PriorAuthBot.Core.Retrieval;
@@ -61,6 +63,21 @@ var api = app.MapGroup("/").RequireAuthorization();
 api.MapPost("/chat", (ChatRequest request, IChatClient chatClient, CancellationToken cancellationToken) =>
     chatClient.GetStreamingResponseAsync(request.Message, cancellationToken: cancellationToken)
         .Select(update => update.Text));
+
+// Chapter 3: classify a question into a typed intent, and decide where it goes.
+api.MapPost("/classify", async (ClassifyRequest request, QuestionClassifier classifier, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var intent = await classifier.ClassifyAsync(request.Question, cancellationToken);
+        return Results.Ok(new ClassifyResponse(intent, QuestionRouter.Route(intent)));
+    }
+    catch (StructuredOutputException)
+    {
+        // The model's output never reached the caller unvalidated, and neither does the raw reply.
+        return Results.Problem("The model did not return a valid classification.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
 
 // Chapters 5 and 6: permission-aware search, showing what the caller is allowed to retrieve.
 api.MapPost("/search", async (SearchRequest request, ClaimsPrincipal user, CallerIdentityFactory identities, SecureRetriever retriever, CancellationToken cancellationToken) =>
