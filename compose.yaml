@@ -6,6 +6,8 @@
 #   docker compose exec ollama ollama pull nomic-embed-text:v1.5
 #   docker compose exec ollama ollama pull llama3.2:3b
 #   docker compose exec ollama ollama pull qwen2.5vl:3b    (chapter 4: scans and intake forms)
+#
+# Chapter 6's second vector store is optional: docker compose --profile qdrant up -d
 services:
   postgres:
     image: pgvector/pgvector:0.8.7-pg17-trixie
@@ -26,6 +28,16 @@ services:
     volumes:
       - ollama-models:/root/.ollama
 
+  qdrant:
+    image: qdrant/qdrant:v1.18.2
+    profiles: [qdrant]
+    ports:
+      - "127.0.0.1:6333:6333"   # REST API and dashboard
+      - "127.0.0.1:6334:6334"   # gRPC, which the .NET client uses
+    volumes:
+      - qdrant-data:/qdrant/storage
+
 volumes:
   postgres-data:
   ollama-models:
+  qdrant-data:

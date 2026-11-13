@@ -72,6 +72,7 @@ jobs:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       PRIORAUTHBOT_TEST_POSTGRES: Host=localhost;Port=5432;Database=priorauthbot_test;Username=postgres;Password=postgres
+      PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
     steps:
       - uses: actions/checkout@v5
 
@@ -86,6 +87,54 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.PostgresIntegrationTests" --output Detailed
+
+      - name: Filtered search experiment (chapter 6)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Pgvector" --output Detailed
+
+      - name: Add the reports to the job summary
+        if: always()
+        run: cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+  qdrant:
+    # Chapter 6: the same permission tests against a second store, chosen by configuration.
+    name: Integration (Qdrant)
+    runs-on: ubuntu-latest
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.18.2
+        ports: ['6333:6333', '6334:6334']
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PRIORAUTHBOT_TEST_QDRANT: localhost:6334
+      PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Wait for Qdrant
+        run: for i in $(seq 1 30); do curl -sf http://localhost:6333/readyz && break; sleep 2; done
+
+      - name: Test against Qdrant
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.QdrantIntegrationTests" --output Detailed
+
+      - name: Filtered search experiment (chapter 6)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Qdrant" --output Detailed
+
+      - name: Add the reports to the job summary
+        if: always()
+        run: cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
   rag-eval:
     # Chapter 7: the golden set against a real local model (Ollama), plus one groundedness check

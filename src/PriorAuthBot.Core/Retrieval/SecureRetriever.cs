@@ -13,7 +13,7 @@ namespace PriorAuthBot.Core.Retrieval;
 /// silently returns fewer results than asked for.
 /// </summary>
 public sealed partial class SecureRetriever(
-    VectorStoreCollection<string, ChunkRecord> collection,
+    VectorStoreCollection<Guid, ChunkRecord> collection,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
     IOptions<RetrievalOptions> options,
     ILogger<SecureRetriever> logger)
@@ -36,7 +36,7 @@ public sealed partial class SecureRetriever(
 
         var searchOptions = new VectorSearchOptions<ChunkRecord>
         {
-            // Translated by the connector: "allowed_groups && @groups" in PostgreSQL,
+            // Translated by the connector: "AllowedGroups" && @groups in PostgreSQL,
             // a payload filter in Qdrant, an OData filter in Azure AI Search.
             Filter = r => r.AllowedGroups.Any(g => groups.Contains(g)),
             ScoreThreshold = settings.MinScore,
@@ -48,7 +48,7 @@ public sealed partial class SecureRetriever(
             // Defense in depth: the filter already did this. If it ever fails, stop loudly.
             if (!caller.IsInAnyGroup(result.Record.AllowedGroups))
             {
-                throw new SecurityException($"Vector store returned chunk {result.Record.Key}, which {caller.UserId} may not see.");
+                throw new SecurityException($"Vector store returned chunk {result.Record.ChunkId}, which {caller.UserId} may not see.");
             }
 
             results.Add(new RetrievedChunk(result.Record, result.Score ?? 0));

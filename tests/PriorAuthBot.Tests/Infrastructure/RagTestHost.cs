@@ -51,7 +51,7 @@ internal sealed class RagTestHost : IAsyncDisposable
     public T Get<T>()
         where T : notnull => _services.GetRequiredService<T>();
 
-    public VectorStoreCollection<string, ChunkRecord> Collection => Get<VectorStoreCollection<string, ChunkRecord>>();
+    public VectorStoreCollection<Guid, ChunkRecord> Collection => Get<VectorStoreCollection<Guid, ChunkRecord>>();
 
     public Task<IngestionReport> IngestSamplesAsync() =>
         Get<IngestionPipeline>().SyncAsync(MarkdownDocumentLoader.LoadDirectoryAsync(TestPaths.SampleDocuments));

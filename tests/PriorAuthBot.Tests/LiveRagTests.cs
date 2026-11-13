@@ -60,7 +60,7 @@ public sealed class LiveRagTests(ITestOutputHelper output)
 
             foreach (var leaked in retrieved.Where(r => !caller.IsInAnyGroup(r.Record.AllowedGroups) || goldenCase.Forbidden.Contains(r.Record.DocumentId)))
             {
-                failures.Add($"{goldenCase.Id}: {leaked.Record.Key} must not be visible to {goldenCase.User}.");
+                failures.Add($"{goldenCase.Id}: {leaked.Record.ChunkId} must not be visible to {goldenCase.User}.");
             }
 
             var answer = await rag.AskAsync(goldenCase.Question, caller, ct);
