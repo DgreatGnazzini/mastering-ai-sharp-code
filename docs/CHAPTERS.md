@@ -22,3 +22,9 @@ Rules:
 - A tag is only created with `scripts/tag-chapter.sh`, which builds and tests first. CI runs again on the tag push.
 - Package versions change only between tags, and the change is noted in the GitHub release for that tag.
 - Published tags never move. A fix becomes a new tag `chNN-r2` (then `-r3`, …), listed in `ERRATA.md`.
+
+## Chapter READMEs
+
+| Tag | README |
+|---|---|
+| `ch07` | [docs/chapters/ch07.md](chapters/ch07.md) |
