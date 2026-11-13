@@ -27,7 +27,7 @@ git diff ch06 ch07  # exactly what chapter 7 adds
 
 ```bash
 dotnet build MasteringAI.slnx
-dotnet test MasteringAI.slnx
+dotnet test --solution MasteringAI.slnx
 dotnet run --project src/PriorAuthBot.Api
 ```
 
