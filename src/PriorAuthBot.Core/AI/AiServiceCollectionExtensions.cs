@@ -16,6 +16,16 @@ public static class AiServiceCollectionExtensions
     /// <summary>The keyed chat client for classification: a smaller model when one is configured.</summary>
     public const string ClassifierKey = "classifier";
 
+    /// <summary>The keyed chat client for images: OCR and form extraction (chapter 4).</summary>
+    public const string VisionKey = "vision";
+
+    private enum Purpose
+    {
+        Chat,
+        Classifier,
+        Vision,
+    }
+
     /// <summary>
     /// Registers PriorAuthBot's <see cref="IChatClient"/>s and its
     /// <see cref="IEmbeddingGenerator{TInput, TEmbedding}"/> for the provider named in configuration.
@@ -47,23 +57,29 @@ public static class AiServiceCollectionExtensions
             };
         });
 
-        // The main chat client, and a keyed one for classification. Both get the same pipeline.
-        services.AddChatClient(sp => CreateChatClient(sp, classifier: false))
+        // The main chat client, plus keyed ones for classification and images. All get the same pipeline.
+        services.AddChatClient(sp => CreateChatClient(sp, Purpose.Chat))
             .UsePriorAuthBotPipeline();
-        services.AddKeyedChatClient(ClassifierKey, sp => CreateChatClient(sp, classifier: true))
+        services.AddKeyedChatClient(ClassifierKey, sp => CreateChatClient(sp, Purpose.Classifier))
+            .UsePriorAuthBotPipeline();
+        services.AddKeyedChatClient(VisionKey, sp => CreateChatClient(sp, Purpose.Vision))
             .UsePriorAuthBotPipeline();
 
         return services;
     }
 
     /// <summary>
-    /// The middleware every PriorAuthBot chat client gets, outermost first: logging sees each call
-    /// once, the cache answers repeats without a model call, and retries sit closest to the provider.
+    /// The middleware every PriorAuthBot chat client gets, outermost first: the PHI guard (only for a
+    /// provider not approved for PHI) runs before anything can log or cache the request, logging sees
+    /// each call once, the cache answers repeats without a model call, and retries sit closest to the provider.
     /// </summary>
     public static ChatClientBuilder UsePriorAuthBotPipeline(this ChatClientBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder
+            .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsApprovedForPhi
+                ? inner
+                : new PhiGuardChatClient(inner))
             .UseLogging()
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheResponses
                 ? new DistributedCachingChatClient(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())
@@ -74,25 +90,33 @@ public static class AiServiceCollectionExtensions
                 sp.GetService<ILoggerFactory>()?.CreateLogger<RetryingChatClient>()));
     }
 
-    private static IChatClient CreateChatClient(IServiceProvider sp, bool classifier)
+    private static IChatClient CreateChatClient(IServiceProvider sp, Purpose purpose)
     {
         var options = sp.GetRequiredService<IOptions<AiOptions>>().Value;
         return options.Provider switch
         {
             "Offline" => new OfflineChatClient(),
             "AzureOpenAI" => CreateAzureOpenAI(options.AzureOpenAI)
-                .GetChatClient(Pick(classifier, options.AzureOpenAI.ClassifierDeployment, options.AzureOpenAI.ChatDeployment))
+                .GetChatClient(Pick(purpose, options.AzureOpenAI.ClassifierDeployment, options.AzureOpenAI.VisionDeployment, options.AzureOpenAI.ChatDeployment))
                 .AsIChatClient(),
             "OpenAI" => CreateOpenAI(options.OpenAI)
-                .GetChatClient(Pick(classifier, options.OpenAI.ClassifierModel, options.OpenAI.ChatModel))
+                .GetChatClient(Pick(purpose, options.OpenAI.ClassifierModel, options.OpenAI.VisionModel, options.OpenAI.ChatModel))
                 .AsIChatClient(),
-            "Ollama" => CreateOllama(options.Ollama, Pick(classifier, options.Ollama.ClassifierModel, options.Ollama.ChatModel)),
+            "Ollama" => CreateOllama(options.Ollama, Pick(purpose, options.Ollama.ClassifierModel, options.Ollama.VisionModel, options.Ollama.ChatModel)),
             _ => throw new InvalidOperationException($"Unknown AI provider '{options.Provider}'."),
         };
     }
 
-    private static string Pick(bool classifier, string? classifierModel, string chatModel) =>
-        classifier && !string.IsNullOrWhiteSpace(classifierModel) ? classifierModel : chatModel;
+    private static string Pick(Purpose purpose, string? classifierModel, string? visionModel, string chatModel)
+    {
+        var specific = purpose switch
+        {
+            Purpose.Classifier => classifierModel,
+            Purpose.Vision => visionModel,
+            _ => null,
+        };
+        return string.IsNullOrWhiteSpace(specific) ? chatModel : specific;
+    }
 
     /// <summary>
     /// Azure OpenAI through its OpenAI-compatible v1 endpoint, signed in with Entra ID: no API key

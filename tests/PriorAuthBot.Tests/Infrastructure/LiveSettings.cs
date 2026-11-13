@@ -20,6 +20,9 @@ internal static class LiveSettings
     /// </summary>
     public static string JudgeModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_JUDGE_MODEL") ?? ChatModel;
 
+    /// <summary>A model that reads images, for chapter 4.</summary>
+    public static string VisionModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_VISION_MODEL") ?? "qwen2.5vl:3b";
+
     public static string EmbeddingModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_EMBEDDING_MODEL") ?? "nomic-embed-text:v1.5";
 
     /// <summary>Folder for reports (chunking table, groundedness scores) that CI uploads as artifacts.</summary>
@@ -39,6 +42,7 @@ internal static class LiveSettings
         ["AI:Ollama:Endpoint"] = Ollama,
         ["AI:Ollama:ChatModel"] = ChatModel,
         ["AI:Ollama:EmbeddingModel"] = EmbeddingModel,
+        ["AI:Ollama:VisionModel"] = VisionModel,
         ["Retrieval:MinScore"] = GoldenSet.Load().Ollama.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture),
     };
 }

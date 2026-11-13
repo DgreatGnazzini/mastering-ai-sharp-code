@@ -1,0 +1,15 @@
+# Fax Handling Procedure
+
+Procedure CMP-412 | Compliance | Revised March 2026
+
+## Before you send
+
+Confirm the fax number with the recipient by phone for every first-time recipient. Use the cover sheet with the confidentiality notice on every fax.
+
+## Minimum necessary
+
+Send only the pages the recipient needs for the stated purpose. Never fax a full chart.
+
+## Misdirected faxes
+
+If a fax with PHI goes to the wrong number, report it to the Privacy Office within 1 business day using the privacy incident form. Ask the recipient to destroy it and confirm in writing.

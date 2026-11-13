@@ -101,6 +101,7 @@ jobs:
       PRIORAUTHBOT_TEST_OLLAMA: http://localhost:11434
       PRIORAUTHBOT_TEST_CHAT_MODEL: llama3.2:3b
       PRIORAUTHBOT_TEST_EMBEDDING_MODEL: nomic-embed-text:v1.5
+      PRIORAUTHBOT_TEST_VISION_MODEL: qwen2.5vl:3b
       # llama3.2:3b could not follow the groundedness evaluator's output format (2 of 13 scored).
       PRIORAUTHBOT_TEST_JUDGE_MODEL: qwen2.5:7b
       PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
@@ -123,6 +124,7 @@ jobs:
           ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_JUDGE_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_VISION_MODEL"
 
       - name: Run the golden set and the groundedness check
         run: >-
@@ -140,6 +142,12 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveClassifierTests" --output Detailed
+
+      - name: Read scans with a vision model (chapter 4)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveIntakeTests" --output Detailed
 
       - name: Add the reports to the job summary
         if: always()

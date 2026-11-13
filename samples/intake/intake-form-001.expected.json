@@ -1,0 +1,11 @@
+{
+  "memberName": "Jordan A. Whitaker",
+  "memberId": "DD-5820317",
+  "dateOfBirth": "1978-09-22",
+  "requestedService": "MRI lumbar spine without contrast",
+  "cptCode": "72148",
+  "icd10Code": "M54.16",
+  "orderingProviderName": "Dr. Lena Park",
+  "orderingProviderNpi": "1457392060",
+  "urgent": false
+}

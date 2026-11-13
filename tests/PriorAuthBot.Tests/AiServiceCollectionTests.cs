@@ -64,6 +64,42 @@ public class AiServiceCollectionTests
     }
 
     [Fact]
+    public void VisionUsesItsOwnModel()
+    {
+        using var services = Build(new() { ["AI:Provider"] = "Ollama" });
+
+        var vision = services.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.VisionKey).GetService<ChatClientMetadata>();
+
+        Assert.Equal("qwen2.5vl:3b", vision?.DefaultModelId);
+    }
+
+    [Theory]
+    [InlineData("Ollama", null, false)]
+    [InlineData("OpenAI", null, true)]
+    [InlineData("AzureOpenAI", null, true)]
+    [InlineData("AzureOpenAI", "true", false)]
+    public void ProvidersNotApprovedForPhiGetTheGuard(string provider, string? approved, bool guarded)
+    {
+        using var services = Build(new()
+        {
+            ["AI:Provider"] = provider,
+            ["AI:ApprovedForPhi"] = approved,
+            ["AI:OpenAI:ApiKey"] = "test-key-not-real",
+            ["AI:AzureOpenAI:Endpoint"] = "https://dd-priorauthbot.openai.azure.com/openai/v1/",
+        });
+
+        foreach (var client in new[]
+        {
+            services.GetRequiredService<IChatClient>(),
+            services.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.ClassifierKey),
+            services.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.VisionKey),
+        })
+        {
+            Assert.Equal(guarded, client.GetService<PhiGuardChatClient>() is not null);
+        }
+    }
+
+    [Fact]
     public void MissingKeyFailsWithInstructions()
     {
         using var services = Build(new() { ["AI:Provider"] = "OpenAI" });

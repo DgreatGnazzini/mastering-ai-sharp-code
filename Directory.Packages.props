@@ -18,6 +18,11 @@
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="3.0.0" />
   </ItemGroup>
+  <ItemGroup Label="Documents: PDF, Word, OCR (ch04)">
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
+    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageVersion Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
+  </ItemGroup>
   <ItemGroup Label="Local development with .NET Aspire (ch01)">
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.6.1" />

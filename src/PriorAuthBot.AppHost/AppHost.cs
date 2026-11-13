@@ -20,6 +20,10 @@ var ollama = builder.AddOllama("ollama")
 var chatModel = ollama.AddModel("chat", "llama3.2:3b");
 var embeddingModel = ollama.AddModel("embedding", "nomic-embed-text:v1.5");
 
+// Chapter 4's vision model, for scans and intake forms: about 3.2 GB more. The API does not wait
+// for it, so the rest of PriorAuthBot starts while it downloads.
+ollama.AddModel("vision", "qwen2.5vl:3b");
+
 builder.AddProject<Projects.PriorAuthBot_Api>("api")
     .WithReference(database)
     .WaitFor(database)

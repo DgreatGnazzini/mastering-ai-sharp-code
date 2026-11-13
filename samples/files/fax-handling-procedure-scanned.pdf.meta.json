@@ -1,0 +1,10 @@
+{
+  "title": "Fax Handling Procedure",
+  "policy": "CMP-412",
+  "department": "Compliance",
+  "allowedGroups": [
+    "AllStaff"
+  ],
+  "sensitivity": "Internal",
+  "phi": false
+}
