@@ -43,7 +43,7 @@ jobs:
 
       - name: Test
         # Tests that call a real model are marked [Trait("Category", "Live")] and are skipped in CI.
-        run: dotnet test --solution MasteringAI.slnx --configuration Release --no-build
+        run: dotnet test MasteringAI.slnx --configuration Release --no-build
 
       - name: Check for vulnerable packages
         if: matrix.os == 'ubuntu-latest'

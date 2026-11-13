@@ -16,7 +16,7 @@ if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
 fi
 
 dotnet build MasteringAI.slnx --configuration Release
-dotnet test --solution MasteringAI.slnx --configuration Release --no-build
+dotnet test MasteringAI.slnx --configuration Release --no-build
 
 git tag -a "$tag" -m "Code for chapter $((10#$1))"
 git push origin "$tag"
