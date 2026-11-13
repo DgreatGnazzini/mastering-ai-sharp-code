@@ -54,7 +54,7 @@ public sealed class ClassifyApiTests
             builder.UseSetting("AI:Provider", "Offline");
             builder.UseSetting("VectorStore:Provider", "InMemory");
             builder.UseSetting("Ingestion:DocumentsPath", TestPaths.SampleDocuments);
-            builder.ConfigureTestServices(services => services.AddSingleton<IChatClient>(new RecordingChatClient(_ => reply)));
+            builder.ConfigureTestServices(services => services.AddKeyedSingleton<IChatClient>(PriorAuthBot.Core.AI.AiServiceCollectionExtensions.ClassifierKey, new RecordingChatClient(_ => reply)));
         }
     }
 }
