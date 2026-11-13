@@ -78,7 +78,7 @@ public class AiServiceCollectionTests
     {
         // A stand-in for Ollama that records the request body and answers with one finished message.
         using var listener = new System.Net.HttpListener();
-        var port = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Max(e => e.Port) + 1;
+        var port = FreePort();
         var prefix = $"http://localhost:{port}/";
         listener.Prefixes.Add(prefix);
         listener.Start();
@@ -100,6 +100,16 @@ public class AiServiceCollectionTests
         await vision.GetResponseAsync("Read this.", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("\"num_ctx\":8192", (await body).Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal);
+    }
+
+    // Ask the operating system for an unused port, then give it back for HttpListener to use.
+    private static int FreePort()
+    {
+        var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        probe.Start();
+        var port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+        return port;
     }
 
     [Theory]
