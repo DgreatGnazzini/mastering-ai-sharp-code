@@ -112,7 +112,10 @@ jobs:
       - name: Install Ollama and pull the models
         run: |
           curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
+          # The hosted runner has no systemd, so the installer cannot start the service.
+          nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          curl -sf http://localhost:11434/api/version || { cat "$RUNNER_TEMP/ollama.log"; exit 1; }
           ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
 
