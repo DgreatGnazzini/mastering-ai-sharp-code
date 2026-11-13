@@ -1,0 +1,243 @@
+{
+  "description": "Chapter 7 golden set: 20 questions over samples/documents. expectedDocuments must reach the context; mustNotSee documents must never be retrieved for that user; expectDecline means PriorAuthBot must say it does not know. Chapter 9 grows this to about 100 questions.",
+  "offline": {
+    "minScore": 0.25
+  },
+  "ollama": {
+    "minScore": 0.6
+  },
+  "users": {
+    "nurse": [
+      "AllStaff",
+      "Clinical"
+    ],
+    "contractor": [
+      "Contractors"
+    ],
+    "claims": [
+      "AllStaff",
+      "Claims"
+    ],
+    "hr": [
+      "AllStaff",
+      "HR"
+    ],
+    "compliance": [
+      "AllStaff",
+      "Compliance"
+    ]
+  },
+  "cases": [
+    {
+      "id": "gs01-sepsis-escalation",
+      "user": "nurse",
+      "question": "When must a positive sepsis screen be escalated to a physician?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "answerMustContain": [
+        "15 minutes"
+      ]
+    },
+    {
+      "id": "gs02-sepsis-contractor",
+      "user": "contractor",
+      "question": "When must a positive sepsis screen be escalated to a physician?",
+      "mustNotSee": [
+        "sepsis-screening-protocol"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs03-mri-criteria-nurse",
+      "user": "nurse",
+      "question": "What are the prior authorization criteria for a lumbar spine MRI?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "six weeks"
+      ]
+    },
+    {
+      "id": "gs04-mri-turnaround-claims",
+      "user": "claims",
+      "question": "How long does a standard prior authorization request for a lumbar MRI take to decide?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "5 business days"
+      ]
+    },
+    {
+      "id": "gs05-mri-contractor",
+      "user": "contractor",
+      "question": "What are the prior authorization criteria for a lumbar spine MRI?",
+      "mustNotSee": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs06-remote-nurse",
+      "user": "nurse",
+      "question": "Can I work remotely?",
+      "expectedDocuments": [
+        "remote-work-policy"
+      ],
+      "mustNotSee": [
+        "contractor-handbook"
+      ],
+      "answerMustContain": [
+        "three days"
+      ]
+    },
+    {
+      "id": "gs07-remote-contractor",
+      "user": "contractor",
+      "question": "Can I work remotely?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "mustNotSee": [
+        "remote-work-policy"
+      ],
+      "answerMustContain": [
+        "statement of work"
+      ]
+    },
+    {
+      "id": "gs08-pto-carryover",
+      "user": "hr",
+      "question": "How many hours of PTO can I carry over into next year?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "40 hours"
+      ]
+    },
+    {
+      "id": "gs09-pto-contractor",
+      "user": "contractor",
+      "question": "How much paid time off do I get?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "mustNotSee": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "not accrue"
+      ]
+    },
+    {
+      "id": "gs10-appeal-deadline",
+      "user": "claims",
+      "question": "What is the deadline for a member to appeal a denied claim?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "answerMustContain": [
+        "180 days"
+      ]
+    },
+    {
+      "id": "gs11-appeal-nurse",
+      "user": "nurse",
+      "question": "What is the deadline for a member to appeal a denied claim?",
+      "mustNotSee": [
+        "claims-appeals-procedure"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs12-investigation-hr",
+      "user": "hr",
+      "question": "How soon does the HR investigator contact the person who made a harassment complaint?",
+      "expectedDocuments": [
+        "workplace-investigations"
+      ],
+      "answerMustContain": [
+        "2 business days"
+      ]
+    },
+    {
+      "id": "gs13-cafeteria",
+      "user": "nurse",
+      "question": "What is on the cafeteria lunch menu this Friday?",
+      "expectDecline": true
+    },
+    {
+      "id": "gs14-breach-notification",
+      "user": "compliance",
+      "question": "How many days do we have to notify members after a HIPAA breach?",
+      "expectedDocuments": [
+        "breach-risk-assessment"
+      ],
+      "answerMustContain": [
+        "60"
+      ]
+    },
+    {
+      "id": "gs15-breach-claims",
+      "user": "claims",
+      "question": "How many days do we have to notify members after a HIPAA breach?",
+      "mustNotSee": [
+        "breach-risk-assessment",
+        "incident-2026-031"
+      ]
+    },
+    {
+      "id": "gs16-report-incident",
+      "user": "nurse",
+      "question": "How do I report a privacy incident?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "answerMustContain": [
+        "24 hours"
+      ]
+    },
+    {
+      "id": "gs17-lost-laptop",
+      "user": "contractor",
+      "question": "What should I do if my laptop is lost or stolen?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "answerMustContain": [
+        "one hour"
+      ]
+    },
+    {
+      "id": "gs18-incident-compliance",
+      "user": "compliance",
+      "question": "What was the outcome of privacy incident 2026-031?",
+      "expectedDocuments": [
+        "incident-2026-031"
+      ],
+      "answerMustContain": [
+        "not a reportable breach"
+      ]
+    },
+    {
+      "id": "gs19-member-phi-claims",
+      "user": "claims",
+      "question": "What happened with the misdirected letter for member Jordan Avery?",
+      "mustNotSee": [
+        "incident-2026-031"
+      ]
+    },
+    {
+      "id": "gs20-unacl-draft",
+      "user": "hr",
+      "question": "What does the draft workforce reduction plan say about the Eastside claims team?",
+      "mustNotSee": [
+        "draft-layoff-plan"
+      ],
+      "expectDecline": true
+    }
+  ]
+}

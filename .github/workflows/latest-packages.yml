@@ -34,4 +34,4 @@ jobs:
         run: dotnet build MasteringAI.slnx --configuration Release
 
       - name: Test
-        run: dotnet test MasteringAI.slnx --configuration Release --no-build
+        run: dotnet test --solution MasteringAI.slnx --configuration Release --no-build

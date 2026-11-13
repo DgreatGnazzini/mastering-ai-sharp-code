@@ -1,0 +1,66 @@
+using Microsoft.Extensions.VectorData;
+using PriorAuthBot.Core.AI;
+
+namespace PriorAuthBot.Core.Retrieval;
+
+/// <summary>
+/// One chunk of one document, as stored in the vector store (chapter 6). The access-control
+/// fields are on the record from the first insert, and <see cref="AllowedGroups"/> is indexed so
+/// the store can filter on it inside the query.
+/// </summary>
+public sealed class ChunkRecord
+{
+    /// <summary>Deterministic: <c>{DocumentId}:{ChunkIndex:D4}</c>, so re-ingestion overwrites instead of duplicating.</summary>
+    [VectorStoreKey]
+    public string Key { get; set; } = string.Empty;
+
+    [VectorStoreData(IsIndexed = true)]
+    public string DocumentId { get; set; } = string.Empty;
+
+    [VectorStoreData(IsIndexed = true)]
+    public int ChunkIndex { get; set; }
+
+    /// <summary>How many chunks the document had when this chunk was written, used to clean up on re-ingestion.</summary>
+    [VectorStoreData]
+    public int ChunkCount { get; set; }
+
+    /// <summary>Hash of the document's text and ACL. A change to either triggers re-ingestion.</summary>
+    [VectorStoreData]
+    public string DocumentHash { get; set; } = string.Empty;
+
+    [VectorStoreData]
+    public string Title { get; set; } = string.Empty;
+
+    [VectorStoreData]
+    public string? PolicyNumber { get; set; }
+
+    /// <summary>The heading path the chunk came from, such as "Accrual &gt; Carryover".</summary>
+    [VectorStoreData]
+    public string Section { get; set; } = string.Empty;
+
+    [VectorStoreData]
+    public string Text { get; set; } = string.Empty;
+
+    [VectorStoreData]
+    public string SourcePath { get; set; } = string.Empty;
+
+    // Security metadata (chapter 6). Copied from the source document's ACL at ingestion.
+
+    [VectorStoreData(IsIndexed = true)]
+    public List<string> AllowedGroups { get; set; } = [];
+
+    [VectorStoreData(IsIndexed = true)]
+    public string Sensitivity { get; set; } = string.Empty;
+
+    [VectorStoreData(IsIndexed = true)]
+    public string Department { get; set; } = string.Empty;
+
+    [VectorStoreData(IsIndexed = true)]
+    public bool ContainsPhi { get; set; }
+
+    [VectorStoreVector(ChunkDimensions.Size, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw)]
+    public ReadOnlyMemory<float> Embedding { get; set; }
+
+    public static string MakeKey(string documentId, int chunkIndex) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{documentId}:{chunkIndex:D4}");
+}

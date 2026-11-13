@@ -21,15 +21,39 @@ git diff ch06 ch07  # exactly what chapter 7 adds
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (pinned in `global.json`)
 - One model provider: Azure OpenAI, OpenAI, or [Ollama](https://ollama.com) for free local models
-- Docker or Podman, for the .NET Aspire AppHost that runs PostgreSQL with pgvector, Qdrant, and Ollama
+- Docker or Podman, for PostgreSQL with pgvector and Ollama (`compose.yaml`; chapter 1 moves this to a .NET Aspire AppHost)
 
 ## Build and test
 
 ```bash
 dotnet build MasteringAI.slnx
-dotnet test MasteringAI.slnx
+dotnet test --solution MasteringAI.slnx
+```
+
+The tests need no model, database, or network: they use an offline embedder and an in-memory vector store. Tests that need real infrastructure are skipped unless you opt in:
+
+| Variable | Runs |
+|---|---|
+| `PRIORAUTHBOT_TEST_POSTGRES` | The golden set against PostgreSQL with pgvector |
+| `PRIORAUTHBOT_TEST_OLLAMA` | The golden set, groundedness check, and chunking experiment against Ollama |
+
+## Run PriorAuthBot locally
+
+```bash
+docker compose up -d
+docker compose exec ollama ollama pull nomic-embed-text:v1.5
+docker compose exec ollama ollama pull llama3.2:3b
 dotnet run --project src/PriorAuthBot.Api
 ```
+
+In Development, sign in as a demo persona with the `X-Demo-User` header (`nurse`, `contractor`, `claims`, `hr`, `compliance`):
+
+```bash
+curl -X POST http://localhost:5080/ask -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"Can I work remotely?"}'
+curl -X POST http://localhost:5080/ask -H "X-Demo-User: contractor" -H "Content-Type: application/json" -d '{"question":"Can I work remotely?"}'
+```
+
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. See [docs/chapters/ch07.md](docs/chapters/ch07.md) for pgvector and OpenAI.
 
 ## Configuration and secrets
 

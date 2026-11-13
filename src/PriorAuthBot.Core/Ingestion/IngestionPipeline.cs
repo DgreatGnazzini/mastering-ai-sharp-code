@@ -1,0 +1,166 @@
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.VectorData;
+using PriorAuthBot.Core.Documents;
+using PriorAuthBot.Core.Retrieval;
+
+namespace PriorAuthBot.Core.Ingestion;
+
+/// <summary>
+/// Load, chunk, embed, upsert (chapter 7). Each run syncs the index with the full set of source
+/// documents: new and changed documents are (re)written, unchanged ones are skipped, and documents
+/// that disappeared from the source, or lost their ACL, are deleted from the index.
+/// </summary>
+public sealed partial class IngestionPipeline(
+    IChunker chunker,
+    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+    VectorStoreCollection<string, ChunkRecord> collection,
+    ILogger<IngestionPipeline> logger)
+{
+    private const int EmbeddingBatchSize = 32;
+    private const int MaxDocuments = 100_000;
+
+    /// <summary>
+    /// Syncs the index with <paramref name="documents"/>, which must be the complete current set:
+    /// anything indexed but missing from it is deleted. Pass a partial set and you delete the rest.
+    /// </summary>
+    public async Task<IngestionReport> SyncAsync(IAsyncEnumerable<SourceDocument> documents, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(documents);
+        await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
+
+        // Chunk 0 of every document carries the document's hash and chunk count.
+        var indexed = new Dictionary<string, ChunkRecord>(StringComparer.Ordinal);
+        await foreach (var first in collection.GetAsync(r => r.ChunkIndex == 0, MaxDocuments, cancellationToken: cancellationToken).ConfigureAwait(false))
+        {
+            indexed[first.DocumentId] = first;
+        }
+
+        int added = 0, updated = 0, unchanged = 0, removed = 0, skipped = 0, chunksWritten = 0;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        await foreach (var document in documents.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            seen.Add(document.Id);
+            indexed.TryGetValue(document.Id, out var existing);
+
+            if (document.Access.IsDenyAll)
+            {
+                // Deny by default: a document with no ACL is never indexed, and loses any old chunks.
+                LogNoAcl(logger, document.Id);
+                skipped++;
+                if (existing is not null)
+                {
+                    await DeleteChunksAsync(existing, cancellationToken).ConfigureAwait(false);
+                    removed++;
+                }
+
+                continue;
+            }
+
+            var hash = Hash(document);
+            if (existing?.DocumentHash == hash)
+            {
+                unchanged++;
+                continue;
+            }
+
+            // Delete before writing. If the ACL shrank, old chunks must not stay searchable under
+            // the old groups, even for the seconds it takes to re-embed the document.
+            if (existing is not null)
+            {
+                await DeleteChunksAsync(existing, cancellationToken).ConfigureAwait(false);
+            }
+
+            chunksWritten += await WriteChunksAsync(document, hash, cancellationToken).ConfigureAwait(false);
+            if (existing is null)
+            {
+                added++;
+            }
+            else
+            {
+                updated++;
+            }
+        }
+
+        foreach (var (documentId, first) in indexed)
+        {
+            if (!seen.Contains(documentId))
+            {
+                await DeleteChunksAsync(first, cancellationToken).ConfigureAwait(false);
+                LogRemoved(logger, documentId);
+                removed++;
+            }
+        }
+
+        var report = new IngestionReport(added, updated, unchanged, removed, skipped, chunksWritten);
+        LogReport(logger, report.Added, report.Updated, report.Unchanged, report.Removed, report.SkippedNoAcl, report.ChunksWritten);
+        return report;
+    }
+
+    private async Task<int> WriteChunksAsync(SourceDocument document, string hash, CancellationToken cancellationToken)
+    {
+        var chunks = chunker.Chunk(document);
+        var records = new List<ChunkRecord>(chunks.Count);
+
+        foreach (var batch in chunks.Chunk(EmbeddingBatchSize))
+        {
+            // Embed the chunk with its title and section, so "Carryover" is found by a question
+            // about carrying over PTO even though the section text never says "PTO".
+            var inputs = batch.Select(c => EmbeddingInput(document, c)).ToList();
+            var embeddings = await embeddingGenerator.GenerateAsync(inputs, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            for (var i = 0; i < batch.Length; i++)
+            {
+                var chunk = batch[i];
+                records.Add(new ChunkRecord
+                {
+                    Key = ChunkRecord.MakeKey(document.Id, chunk.Index),
+                    DocumentId = document.Id,
+                    ChunkIndex = chunk.Index,
+                    ChunkCount = chunks.Count,
+                    DocumentHash = hash,
+                    Title = document.Title,
+                    PolicyNumber = document.PolicyNumber,
+                    Section = chunk.Section,
+                    Text = chunk.Text,
+                    SourcePath = Path.GetFileName(document.SourcePath),
+                    AllowedGroups = [.. document.Access.AllowedGroups],
+                    Sensitivity = document.Access.Sensitivity,
+                    Department = document.Department,
+                    ContainsPhi = document.Access.ContainsPhi,
+                    Embedding = embeddings[i].Vector,
+                });
+            }
+        }
+
+        await collection.UpsertAsync(records, cancellationToken).ConfigureAwait(false);
+        return records.Count;
+    }
+
+    private Task DeleteChunksAsync(ChunkRecord first, CancellationToken cancellationToken) =>
+        collection.DeleteAsync(Enumerable.Range(0, Math.Max(first.ChunkCount, 1)).Select(i => ChunkRecord.MakeKey(first.DocumentId, i)), cancellationToken);
+
+    internal static string EmbeddingInput(SourceDocument document, TextChunk chunk) =>
+        chunk.Section.Length == 0
+            ? $"{document.Title}\n\n{chunk.Text}"
+            : $"{document.Title} > {chunk.Section}\n\n{chunk.Text}";
+
+    private static string Hash(SourceDocument document)
+    {
+        var material = string.Join('\n', document.Title, document.PolicyNumber, document.Department,
+            string.Join(',', document.Access.AllowedGroups), document.Access.Sensitivity, document.Access.ContainsPhi, document.Text);
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(material)));
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Document {DocumentId} has no allowed groups and was not indexed.")]
+    private static partial void LogNoAcl(ILogger logger, string documentId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Document {DocumentId} is gone from the source and was removed from the index.")]
+    private static partial void LogRemoved(ILogger logger, string documentId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ingestion: {Added} added, {Updated} updated, {Unchanged} unchanged, {Removed} removed, {Skipped} skipped with no ACL, {Chunks} chunks written.")]
+    private static partial void LogReport(ILogger logger, int added, int updated, int unchanged, int removed, int skipped, int chunks);
+}

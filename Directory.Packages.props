@@ -16,13 +16,19 @@
     <PackageVersion Include="OpenAI" Version="2.15.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.2" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
+    <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="3.0.0" />
   </ItemGroup>
   <ItemGroup Label="Vector data and retrieval (ch05-ch08)">
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="11.0.0" />
-    <!-- The vector store connectors are still preview packages. -->
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.74.0-preview" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.74.0-preview" />
+    <!--
+      The vector store connectors moved out of Semantic Kernel in 2026: Microsoft.SemanticKernel.Connectors.*
+      is deprecated in favor of the stable CommunityToolkit.VectorData.* packages, which build against
+      Microsoft.Extensions.VectorData.Abstractions 11 (the SK packages break at runtime with it).
+    -->
+    <PackageVersion Include="CommunityToolkit.VectorData.InMemory" Version="1.0.1" />
+    <PackageVersion Include="CommunityToolkit.VectorData.PgVector" Version="1.0.2" />
+    <PackageVersion Include="CommunityToolkit.VectorData.Qdrant" Version="1.0.1" />
+    <PackageVersion Include="CommunityToolkit.VectorData.AzureAISearch" Version="1.0.1" />
   </ItemGroup>
   <ItemGroup Label="Agents (ch09-ch10)">
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
@@ -47,7 +53,12 @@
   <ItemGroup Label="Local models (ch15)">
     <PackageVersion Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.19.0" />
   </ItemGroup>
+  <ItemGroup Label="Web host and identity (ch02, ch07)">
+    <!-- 10.0.x servicing releases match the net10.0 target framework. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
+  </ItemGroup>
   <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
