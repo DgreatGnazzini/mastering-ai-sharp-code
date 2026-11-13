@@ -93,10 +93,6 @@ jobs:
     name: RAG eval (golden set on Ollama)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    services:
-      ollama:
-        image: ollama/ollama:0.40.16
-        ports: ['11434:11434']
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -111,10 +107,14 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Pull the models
+      # Installed on the runner rather than as a service container: in a container on the hosted
+      # runner, Ollama ran inference on a single thread and every answer took minutes.
+      - name: Install Ollama and pull the models
         run: |
-          docker exec ${{ job.services.ollama.id }} ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
-          docker exec ${{ job.services.ollama.id }} ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
+          curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
 
       - name: Run the golden set and the groundedness check
         run: >-

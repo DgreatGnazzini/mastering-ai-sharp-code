@@ -27,7 +27,7 @@ public static class AiServiceCollectionExtensions
                 "OpenAI" => new OpenAIClient(RequireKey(options))
                     .GetEmbeddingClient(options.OpenAI.EmbeddingModel)
                     .AsIEmbeddingGenerator(ChunkDimensions.Size),
-                "Ollama" => new OllamaApiClient(options.Ollama.Endpoint, options.Ollama.EmbeddingModel),
+                "Ollama" => CreateOllama(options.Ollama, options.Ollama.EmbeddingModel),
                 _ => throw new InvalidOperationException($"Unknown AI provider '{options.Provider}'."),
             };
         });
@@ -39,7 +39,7 @@ public static class AiServiceCollectionExtensions
             {
                 "Offline" => new OfflineChatClient(),
                 "OpenAI" => new OpenAIClient(RequireKey(options)).GetChatClient(options.OpenAI.ChatModel).AsIChatClient(),
-                "Ollama" => new OllamaApiClient(options.Ollama.Endpoint, options.Ollama.ChatModel),
+                "Ollama" => CreateOllama(options.Ollama, options.Ollama.ChatModel),
                 _ => throw new InvalidOperationException($"Unknown AI provider '{options.Provider}'."),
             };
         })
@@ -47,6 +47,9 @@ public static class AiServiceCollectionExtensions
 
         return services;
     }
+
+    private static OllamaApiClient CreateOllama(OllamaOptions options, string model) =>
+        new(new HttpClient { BaseAddress = options.Endpoint, Timeout = options.Timeout }, model);
 
     private static string RequireKey(AiOptions options) =>
         options.OpenAI.ApiKey ?? throw new InvalidOperationException(

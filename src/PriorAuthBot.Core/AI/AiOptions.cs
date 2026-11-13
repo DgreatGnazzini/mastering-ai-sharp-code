@@ -27,6 +27,12 @@ public sealed class OllamaOptions
 
     /// <summary>nomic-embed-text returns 768 dimensions, which matches <see cref="Retrieval.ChunkRecord"/>.</summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text:v1.5";
+
+    /// <summary>
+    /// Local models on a CPU can take minutes to read a long prompt. HttpClient's default of
+    /// 100 seconds is too short for that, so the timeout is configurable.
+    /// </summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
 }
 
 public sealed class OpenAIOptions
