@@ -35,12 +35,13 @@ public static class AiServiceCollectionExtensions
     public static IServiceCollection AddPriorAuthBotAI(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
-        if (configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheResponses)}"))
+        if (configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheResponses)}")
+            || configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheEmbeddings)}"))
         {
             services.AddDistributedMemoryCache();
         }
 
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+        services.AddEmbeddingGenerator(sp =>
         {
             var options = sp.GetRequiredService<IOptions<AiOptions>>().Value;
             return options.Provider switch
@@ -55,7 +56,8 @@ public static class AiServiceCollectionExtensions
                 "Ollama" => CreateOllama(options.Ollama, options.Ollama.EmbeddingModel),
                 _ => throw new InvalidOperationException($"Unknown AI provider '{options.Provider}'."),
             };
-        });
+        })
+        .UsePriorAuthBotEmbeddingPipeline();
 
         // The main chat client, plus keyed ones for classification and images. All get the same pipeline.
         services.AddChatClient(sp => CreateChatClient(sp, Purpose.Chat))
@@ -88,6 +90,24 @@ public static class AiServiceCollectionExtensions
                 inner,
                 sp.GetRequiredService<IOptions<AiOptions>>().Value.Resilience,
                 sp.GetService<ILoggerFactory>()?.CreateLogger<RetryingChatClient>()));
+    }
+
+    /// <summary>
+    /// The middleware every embedding generator gets (chapter 5), in the same order as the chat
+    /// pipeline: the PHI guard first, then logging, then an optional cache. Embeddings are a good
+    /// fit for caching, because the same text always gets the same vector from the same model.
+    /// </summary>
+    public static EmbeddingGeneratorBuilder<string, Embedding<float>> UsePriorAuthBotEmbeddingPipeline(this EmbeddingGeneratorBuilder<string, Embedding<float>> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder
+            .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsApprovedForPhi
+                ? inner
+                : new PhiGuardEmbeddingGenerator(inner))
+            .UseLogging()
+            .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheEmbeddings
+                ? new DistributedCachingEmbeddingGenerator<string, Embedding<float>>(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())
+                : inner);
     }
 
     private static IChatClient CreateChatClient(IServiceProvider sp, Purpose purpose)

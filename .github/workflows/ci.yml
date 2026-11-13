@@ -153,6 +153,12 @@ jobs:
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveClassifierTests" --output Detailed
 
+      - name: Search the policy catalog with embeddings (chapter 5)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveSemanticSearchTests" --output Detailed
+
       - name: Read scans with a vision model (chapter 4)
         if: always()
         run: >-

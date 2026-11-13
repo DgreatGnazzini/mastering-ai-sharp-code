@@ -29,6 +29,13 @@ public sealed class AiOptions
     public bool CacheResponses { get; set; }
 
     /// <summary>
+    /// Cache embeddings in memory (chapter 5), keyed by the text and the request options. The key
+    /// does not include the model, so clear the cache when you change embedding models. Off by
+    /// default for the same reason as <see cref="CacheResponses"/>: the cache holds the text it was given.
+    /// </summary>
+    public bool CacheEmbeddings { get; set; }
+
+    /// <summary>
     /// Whether this provider may receive PHI (chapter 4). Leave it unset to get the default: true for
     /// Ollama and Offline, which run on your own machines, and false for hosted providers. Set it to
     /// true for Azure OpenAI only once a business associate agreement covers the subscription.

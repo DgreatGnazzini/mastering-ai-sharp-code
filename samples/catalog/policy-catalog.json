@@ -1,0 +1,1367 @@
+[
+  {
+    "id": "gen-001",
+    "policy": "GEN-001",
+    "title": "Code of Conduct",
+    "department": "HR",
+    "summary": "Sets the standards of honesty, respect, and professional behavior expected of every employee and contractor, and explains how to report a concern without retaliation."
+  },
+  {
+    "id": "hr-101",
+    "policy": "HR-101",
+    "title": "Equal Employment Opportunity",
+    "department": "HR",
+    "summary": "Prohibits discrimination in hiring, pay, promotion, and termination on the basis of any protected characteristic, and names HR as the place to raise a complaint."
+  },
+  {
+    "id": "hr-102",
+    "policy": "HR-102",
+    "title": "Anti-Harassment",
+    "department": "HR",
+    "summary": "Defines harassment, including sexual harassment, gives examples, and explains how complaints are investigated and kept confidential."
+  },
+  {
+    "id": "hr-104",
+    "policy": "HR-104",
+    "title": "Paid Time Off",
+    "department": "HR",
+    "summary": "Explains how vacation and personal days accrue each pay period, how much can carry over into the next year, and how to request time away from work."
+  },
+  {
+    "id": "hr-103",
+    "policy": "HR-103",
+    "title": "Holidays",
+    "department": "HR",
+    "summary": "Lists the eleven company holidays and explains holiday pay for people who are scheduled to work on one, such as the weekend clinical line."
+  },
+  {
+    "id": "hr-120",
+    "policy": "HR-120",
+    "title": "Remote and Hybrid Work",
+    "department": "HR",
+    "summary": "Explains who may work from home, how many days a week, the equipment the company provides, and the rules for working from another state."
+  },
+  {
+    "id": "hr-105",
+    "policy": "HR-105",
+    "title": "Family and Medical Leave (FMLA)",
+    "department": "HR",
+    "summary": "Describes up to twelve weeks of job-protected unpaid leave for a serious health condition, a new child, or caring for a family member, and how to apply."
+  },
+  {
+    "id": "hr-106",
+    "policy": "HR-106",
+    "title": "Parental Leave",
+    "department": "HR",
+    "summary": "Provides eight weeks of fully paid leave to birth, adoptive, and foster parents in the first year after the child arrives, on top of any disability benefits."
+  },
+  {
+    "id": "hr-107",
+    "policy": "HR-107",
+    "title": "Bereavement Leave",
+    "department": "HR",
+    "summary": "Gives up to five paid days off after the death of a close family member and three days for other relatives, with no documentation required."
+  },
+  {
+    "id": "hr-108",
+    "policy": "HR-108",
+    "title": "Jury Duty and Witness Leave",
+    "department": "HR",
+    "summary": "Pays regular wages for up to ten days of jury service and explains what to do when a court summons arrives."
+  },
+  {
+    "id": "hr-109",
+    "policy": "HR-109",
+    "title": "Military Leave",
+    "department": "HR",
+    "summary": "Protects the jobs of employees called to military service under USERRA and continues health coverage during the first thirty days."
+  },
+  {
+    "id": "hr-110",
+    "policy": "HR-110",
+    "title": "Short-Term Disability",
+    "department": "HR",
+    "summary": "Replaces sixty percent of pay for up to twenty-six weeks when an illness or injury keeps an employee from working, after a seven-day waiting period."
+  },
+  {
+    "id": "hr-111",
+    "policy": "HR-111",
+    "title": "Workers' Compensation",
+    "department": "HR",
+    "summary": "Explains what to do after an injury at work: report it the same day, get care, and file the claim with HR within twenty-four hours."
+  },
+  {
+    "id": "hr-112",
+    "policy": "HR-112",
+    "title": "Overtime and Timekeeping",
+    "department": "HR",
+    "summary": "Explains who is eligible for overtime, how to record hours accurately, and why working off the clock is never allowed."
+  },
+  {
+    "id": "hr-113",
+    "policy": "HR-113",
+    "title": "Payroll Schedule and Pay Stubs",
+    "department": "HR",
+    "summary": "Employees are paid every other Friday by direct deposit; explains how to view pay stubs and correct a payroll error."
+  },
+  {
+    "id": "hr-114",
+    "policy": "HR-114",
+    "title": "Performance Reviews",
+    "department": "HR",
+    "summary": "Describes the annual review cycle, the mid-year check-in, the five-point rating scale, and how ratings feed into merit increases."
+  },
+  {
+    "id": "hr-115",
+    "policy": "HR-115",
+    "title": "Promotions and Internal Transfers",
+    "department": "HR",
+    "summary": "Explains how to apply for an internal job, when to tell your manager, and the minimum time in role before transferring."
+  },
+  {
+    "id": "hr-116",
+    "policy": "HR-116",
+    "title": "Hiring and Background Checks",
+    "department": "HR",
+    "summary": "Describes the background, license, and exclusion-list checks completed before an offer is final, including for contractors with system access."
+  },
+  {
+    "id": "hr-117",
+    "policy": "HR-117",
+    "title": "Employee Referral Bonus",
+    "department": "HR",
+    "summary": "Pays a referral bonus when someone you refer is hired and stays ninety days; lists the roles that qualify for a higher bonus."
+  },
+  {
+    "id": "hr-118",
+    "policy": "HR-118",
+    "title": "Tuition Assistance",
+    "department": "HR",
+    "summary": "Reimburses up to a yearly limit for job-related courses and degrees, with a pay-back requirement if the employee leaves within a year."
+  },
+  {
+    "id": "hr-119",
+    "policy": "HR-119",
+    "title": "Professional License Renewal",
+    "department": "HR",
+    "summary": "The company pays renewal fees and continuing education costs for nursing, pharmacy, and coding credentials required for the job."
+  },
+  {
+    "id": "hr-121",
+    "policy": "HR-121",
+    "title": "Dress Code",
+    "department": "HR",
+    "summary": "Business casual in offices, scrubs or business casual for clinical staff on site, and badges visible at all times."
+  },
+  {
+    "id": "hr-122",
+    "policy": "HR-122",
+    "title": "Drug-Free Workplace",
+    "department": "HR",
+    "summary": "Prohibits working under the influence and explains when testing happens, such as after a workplace accident."
+  },
+  {
+    "id": "hr-123",
+    "policy": "HR-123",
+    "title": "Workplace Violence Prevention",
+    "department": "HR",
+    "summary": "Prohibits threats and weapons on company property and explains how to report a threat or an unsafe situation."
+  },
+  {
+    "id": "hr-124",
+    "policy": "HR-124",
+    "title": "Employee Assistance Program",
+    "department": "HR",
+    "summary": "Offers free, confidential counseling sessions and referrals for stress, family, financial, and legal concerns to employees and their households."
+  },
+  {
+    "id": "hr-125",
+    "policy": "HR-125",
+    "title": "Health and Dental Benefits for Employees",
+    "department": "HR",
+    "summary": "Summarizes the medical, dental, and vision plans available to employees, open enrollment, and when coverage starts for new hires."
+  },
+  {
+    "id": "hr-126",
+    "policy": "HR-126",
+    "title": "Retirement Plan (401(k))",
+    "department": "HR",
+    "summary": "Explains the company match, vesting schedule, automatic enrollment, and how to change contributions."
+  },
+  {
+    "id": "hr-127",
+    "policy": "HR-127",
+    "title": "Resignation and Exit Process",
+    "department": "HR",
+    "summary": "Asks for two weeks' notice, explains the final paycheck and PTO payout, and lists the equipment and badges to return on the last day."
+  },
+  {
+    "id": "hr-128",
+    "policy": "HR-128",
+    "title": "Progressive Discipline",
+    "department": "HR",
+    "summary": "Describes the steps from verbal warning to termination and the conduct that can skip steps, such as a privacy violation."
+  },
+  {
+    "id": "hr-129",
+    "policy": "HR-129",
+    "title": "Personnel Files and Employee Records",
+    "department": "HR",
+    "summary": "Explains what HR keeps in a personnel file, how long it is kept, and how employees can ask to see their own."
+  },
+  {
+    "id": "hr-130",
+    "policy": "HR-130",
+    "title": "Flexible Work Schedules",
+    "department": "HR",
+    "summary": "Allows compressed weeks and shifted hours with manager approval, as long as core hours from ten to three are covered."
+  },
+  {
+    "id": "hr-131",
+    "policy": "HR-131",
+    "title": "Lactation Accommodation",
+    "department": "HR",
+    "summary": "Provides private lactation rooms and paid break time for nursing parents, at every office."
+  },
+  {
+    "id": "hr-132",
+    "policy": "HR-132",
+    "title": "Reasonable Accommodation",
+    "department": "HR",
+    "summary": "Explains how to request a workplace accommodation for a disability or religious practice and how requests are kept confidential."
+  },
+  {
+    "id": "cln-410",
+    "policy": "CLN-410",
+    "title": "Sepsis Screening and Escalation",
+    "department": "Clinical",
+    "summary": "Gives the care management nurse line the screening questions for possible sepsis and the steps to escalate to emergency care immediately."
+  },
+  {
+    "id": "cln-201",
+    "policy": "CLN-201",
+    "title": "Nurse Advice Line Protocols",
+    "department": "Clinical",
+    "summary": "Lists the symptom-based protocols nurses follow on member calls, when to direct a member to urgent care or the emergency room, and how to document the call."
+  },
+  {
+    "id": "cln-305",
+    "policy": "CLN-305",
+    "title": "Medication Reconciliation",
+    "department": "Clinical",
+    "summary": "Describes how care managers compare a member's medication list across prescribers after a hospital discharge and flag interactions to the pharmacist."
+  },
+  {
+    "id": "cln-202",
+    "policy": "CLN-202",
+    "title": "Care Management Enrollment",
+    "department": "Clinical",
+    "summary": "Explains which members are offered care management, such as those with heart failure or diabetes, and how outreach and consent work."
+  },
+  {
+    "id": "cln-203",
+    "policy": "CLN-203",
+    "title": "Transitions of Care After Discharge",
+    "department": "Clinical",
+    "summary": "Requires a follow-up call within two business days of a hospital discharge to check medications, appointments, and home support."
+  },
+  {
+    "id": "cln-204",
+    "policy": "CLN-204",
+    "title": "Clinical Documentation Standards",
+    "department": "Clinical",
+    "summary": "Sets the rules for clinical notes: timely, factual, signed, and never copied forward without review."
+  },
+  {
+    "id": "cln-205",
+    "policy": "CLN-205",
+    "title": "Medical Necessity Criteria",
+    "department": "Clinical",
+    "summary": "Explains which nationally recognized criteria clinical reviewers use to decide whether a requested service is medically necessary."
+  },
+  {
+    "id": "cln-206",
+    "policy": "CLN-206",
+    "title": "Peer-to-Peer Review",
+    "department": "Clinical",
+    "summary": "Lets an ordering physician discuss a denial with a plan medical director before or after a decision, and sets the scheduling time frames."
+  },
+  {
+    "id": "cln-207",
+    "policy": "CLN-207",
+    "title": "Utilization Review Time Frames",
+    "department": "Clinical",
+    "summary": "Sets decision deadlines for standard and expedited prior authorization requests and for concurrent review of inpatient stays."
+  },
+  {
+    "id": "cln-208",
+    "policy": "CLN-208",
+    "title": "Behavioral Health Crisis Response",
+    "department": "Clinical",
+    "summary": "Gives nurses the steps to follow when a member expresses thoughts of self-harm, including a warm transfer to the crisis line."
+  },
+  {
+    "id": "cln-209",
+    "policy": "CLN-209",
+    "title": "Maternity Care Management",
+    "department": "Clinical",
+    "summary": "Describes outreach to pregnant members, high-risk pregnancy screening, and postpartum follow-up visits."
+  },
+  {
+    "id": "cln-210",
+    "policy": "CLN-210",
+    "title": "Chronic Kidney Disease Program",
+    "department": "Clinical",
+    "summary": "Explains how members with advanced kidney disease are identified and connected to nephrology and dialysis planning."
+  },
+  {
+    "id": "cln-211",
+    "policy": "CLN-211",
+    "title": "Diabetes Management Program",
+    "department": "Clinical",
+    "summary": "Covers glucose monitoring supplies, education sessions, and the A1c targets care managers track with members."
+  },
+  {
+    "id": "cln-212",
+    "policy": "CLN-212",
+    "title": "Heart Failure Program",
+    "department": "Clinical",
+    "summary": "Describes daily weight monitoring, symptom check calls, and when to escalate a member with worsening heart failure."
+  },
+  {
+    "id": "cln-213",
+    "policy": "CLN-213",
+    "title": "Infection Control in Clinics",
+    "department": "Clinical",
+    "summary": "Sets hand hygiene, cleaning, and personal protective equipment rules for the on-site employee clinics."
+  },
+  {
+    "id": "cln-214",
+    "policy": "CLN-214",
+    "title": "Clinical Staff Licensure Verification",
+    "department": "Clinical",
+    "summary": "Requires primary-source verification of every nurse's and pharmacist's license at hire and before each expiration."
+  },
+  {
+    "id": "cln-215",
+    "policy": "CLN-215",
+    "title": "Interpreter Services",
+    "department": "Clinical",
+    "summary": "Explains how to get a qualified medical interpreter for a member call in any language, at no cost to the member."
+  },
+  {
+    "id": "cln-216",
+    "policy": "CLN-216",
+    "title": "Advance Directives",
+    "department": "Clinical",
+    "summary": "Explains how care managers talk with members about advance directives and where members can get the forms."
+  },
+  {
+    "id": "cln-217",
+    "policy": "CLN-217",
+    "title": "Home Health Coordination",
+    "department": "Clinical",
+    "summary": "Describes how care managers arrange skilled nursing and therapy visits at home after a hospital stay."
+  },
+  {
+    "id": "cln-218",
+    "policy": "CLN-218",
+    "title": "Durable Medical Equipment Review",
+    "department": "Clinical",
+    "summary": "Lists the clinical documentation needed to approve wheelchairs, hospital beds, oxygen, and CPAP machines."
+  },
+  {
+    "id": "cln-219",
+    "policy": "CLN-219",
+    "title": "Pharmacy and Therapeutics Committee",
+    "department": "Clinical",
+    "summary": "Describes how the committee reviews drugs for the formulary, how often it meets, and how conflicts of interest are handled."
+  },
+  {
+    "id": "cln-220",
+    "policy": "CLN-220",
+    "title": "Opioid Prescribing Safety",
+    "department": "Clinical",
+    "summary": "Explains the limits on first-fill opioid prescriptions, the morphine-equivalent dose threshold that triggers review, and naloxone outreach."
+  },
+  {
+    "id": "cln-221",
+    "policy": "CLN-221",
+    "title": "Specialty Pharmacy Management",
+    "department": "Clinical",
+    "summary": "Covers high-cost specialty drugs, the network specialty pharmacy, and the clinical review required before the first fill."
+  },
+  {
+    "id": "cln-222",
+    "policy": "CLN-222",
+    "title": "Clinical Quality Measures (HEDIS)",
+    "department": "Clinical",
+    "summary": "Describes how the plan measures preventive care and chronic condition quality, and how care gaps are sent to providers."
+  },
+  {
+    "id": "cln-223",
+    "policy": "CLN-223",
+    "title": "Member Health Risk Assessment",
+    "department": "Clinical",
+    "summary": "Explains the annual health questionnaire, who receives it, and how answers route members into programs."
+  },
+  {
+    "id": "cln-224",
+    "policy": "CLN-224",
+    "title": "Telehealth Clinical Standards",
+    "department": "Clinical",
+    "summary": "Sets the rules for video and phone visits through the plan's virtual care vendor, including when an in-person visit is required."
+  },
+  {
+    "id": "cln-225",
+    "policy": "CLN-225",
+    "title": "Emergency Room Follow-Up",
+    "department": "Clinical",
+    "summary": "Requires outreach to members after an emergency room visit for a condition that could have been treated in primary care."
+  },
+  {
+    "id": "cln-226",
+    "policy": "CLN-226",
+    "title": "Preventive Care Reminders",
+    "department": "Clinical",
+    "summary": "Describes reminder letters and calls for screenings such as mammograms, colonoscopies, and childhood immunizations."
+  },
+  {
+    "id": "cln-227",
+    "policy": "CLN-227",
+    "title": "Palliative Care Program",
+    "department": "Clinical",
+    "summary": "Offers symptom management and care planning support to members with serious illness, alongside curative treatment."
+  },
+  {
+    "id": "cln-228",
+    "policy": "CLN-228",
+    "title": "Case Rounds and Clinical Escalation",
+    "department": "Clinical",
+    "summary": "Describes the weekly case rounds where complex members are discussed with a medical director and pharmacist."
+  },
+  {
+    "id": "cln-229",
+    "policy": "CLN-229",
+    "title": "Clinical Incident Reporting",
+    "department": "Clinical",
+    "summary": "Explains how to report an event that harmed or could have harmed a member, and how incidents are reviewed without blame."
+  },
+  {
+    "id": "cln-230",
+    "policy": "CLN-230",
+    "title": "Nurse Reviewer Training",
+    "department": "Clinical",
+    "summary": "Lists the onboarding and annual training required before a nurse makes prior authorization recommendations."
+  },
+  {
+    "id": "clm-301",
+    "policy": "CLM-301",
+    "title": "Prior Authorization Overview",
+    "department": "Claims",
+    "summary": "Explains which services need approval before they are provided, who submits the request, and what happens when a request arrives without one."
+  },
+  {
+    "id": "clm-302",
+    "policy": "CLM-302",
+    "title": "Prior Authorization Intake",
+    "department": "Claims",
+    "summary": "Describes how faxed, portal, and phone requests are logged, checked for missing information, and routed to a nurse reviewer."
+  },
+  {
+    "id": "clm-303",
+    "policy": "CLM-303",
+    "title": "Urgent and Expedited Requests",
+    "department": "Claims",
+    "summary": "Explains when a request qualifies as expedited and the seventy-two-hour decision deadline that applies to it."
+  },
+  {
+    "id": "clm-304",
+    "policy": "CLM-304",
+    "title": "Retroactive Authorization",
+    "department": "Claims",
+    "summary": "Describes the narrow cases, such as emergencies and newborns, in which approval can be requested after the service was provided."
+  },
+  {
+    "id": "clm-305",
+    "policy": "CLM-305",
+    "title": "Claims Submission Requirements",
+    "department": "Claims",
+    "summary": "Lists the information a clean claim must include and the timely filing limit for in-network providers."
+  },
+  {
+    "id": "clm-306",
+    "policy": "CLM-306",
+    "title": "Claim Denials and Remark Codes",
+    "department": "Claims",
+    "summary": "Explains the most common denial reasons, the remark codes on the remittance, and what a provider can fix and resubmit."
+  },
+  {
+    "id": "clm-620",
+    "policy": "CLM-620",
+    "title": "Member Appeals",
+    "department": "Claims",
+    "summary": "Explains how a member appeals a denial, the sixty-day filing window, the review by a clinician not involved in the original decision, and the time frames."
+  },
+  {
+    "id": "clm-307",
+    "policy": "CLM-307",
+    "title": "Provider Disputes and Reconsiderations",
+    "department": "Claims",
+    "summary": "Describes how a provider disputes a payment amount and the difference between a reconsideration and an appeal."
+  },
+  {
+    "id": "clm-308",
+    "policy": "CLM-308",
+    "title": "External Review",
+    "department": "Claims",
+    "summary": "Explains a member's right to an independent external review after the internal appeal is exhausted."
+  },
+  {
+    "id": "clm-309",
+    "policy": "CLM-309",
+    "title": "Coordination of Benefits",
+    "department": "Claims",
+    "summary": "Explains how the plan decides which coverage pays first when a member has more than one plan, including Medicare."
+  },
+  {
+    "id": "clm-310",
+    "policy": "CLM-310",
+    "title": "Subrogation",
+    "department": "Claims",
+    "summary": "Describes how the plan recovers claim costs when another party, such as an auto insurer, is responsible for an injury."
+  },
+  {
+    "id": "clm-311",
+    "policy": "CLM-311",
+    "title": "Out-of-Network Claims",
+    "department": "Claims",
+    "summary": "Explains how out-of-network services are paid, balance billing protections, and when an exception makes them in-network."
+  },
+  {
+    "id": "clm-312",
+    "policy": "CLM-312",
+    "title": "No Surprises Act Compliance",
+    "department": "Claims",
+    "summary": "Describes the protections against surprise bills for emergency care and for out-of-network clinicians at in-network facilities."
+  },
+  {
+    "id": "clm-313",
+    "policy": "CLM-313",
+    "title": "Claims Payment Accuracy Audits",
+    "department": "Claims",
+    "summary": "Describes the monthly sample of paid claims audited for coding and payment errors, and how errors are corrected."
+  },
+  {
+    "id": "clm-314",
+    "policy": "CLM-314",
+    "title": "Duplicate Claim Detection",
+    "department": "Claims",
+    "summary": "Explains how duplicate and overlapping claims are flagged before payment."
+  },
+  {
+    "id": "clm-315",
+    "policy": "CLM-315",
+    "title": "Fraud, Waste, and Abuse Referrals",
+    "department": "Claims",
+    "summary": "Explains the warning signs of billing fraud and how claims staff refer a suspicious pattern to the Special Investigations Unit."
+  },
+  {
+    "id": "clm-316",
+    "policy": "CLM-316",
+    "title": "Overpayment Recovery",
+    "department": "Claims",
+    "summary": "Describes how the plan notifies a provider of an overpayment and the timeline to repay or dispute it."
+  },
+  {
+    "id": "clm-317",
+    "policy": "CLM-317",
+    "title": "Continuity of Care for New Members",
+    "department": "Claims",
+    "summary": "Allows new members in active treatment to keep seeing an out-of-network provider for up to ninety days."
+  },
+  {
+    "id": "phr-310",
+    "policy": "PHR-310",
+    "title": "Formulary Exception Requests",
+    "department": "Claims",
+    "summary": "Explains how a prescriber requests coverage of a drug that is not on the formulary, and the clinical information required."
+  },
+  {
+    "id": "clm-318",
+    "policy": "CLM-318",
+    "title": "Step Therapy",
+    "department": "Claims",
+    "summary": "Explains which drugs require trying a preferred drug first and how to request an exception when it is not appropriate."
+  },
+  {
+    "id": "clm-319",
+    "policy": "CLM-319",
+    "title": "Member Cost Sharing",
+    "department": "Claims",
+    "summary": "Explains deductibles, copays, coinsurance, and the out-of-pocket maximum, with worked examples."
+  },
+  {
+    "id": "clm-320",
+    "policy": "CLM-320",
+    "title": "Explanation of Benefits Statements",
+    "department": "Claims",
+    "summary": "Describes what appears on the EOB a member receives after a claim and how to read it."
+  },
+  {
+    "id": "cmp-401",
+    "policy": "CMP-401",
+    "title": "HIPAA Privacy Rule Overview",
+    "department": "Compliance",
+    "summary": "Summarizes what protected health information is, the minimum necessary standard, and when PHI may be used or disclosed without authorization."
+  },
+  {
+    "id": "cmp-402",
+    "policy": "CMP-402",
+    "title": "Minimum Necessary Standard",
+    "department": "Compliance",
+    "summary": "Requires staff to use, request, and disclose only the PHI needed for a task, and gives examples for claims and care management."
+  },
+  {
+    "id": "cmp-403",
+    "policy": "CMP-403",
+    "title": "Member Rights to Access Records",
+    "department": "Compliance",
+    "summary": "Explains how a member requests a copy of their records, the thirty-day deadline, and the allowed fees."
+  },
+  {
+    "id": "cmp-110",
+    "policy": "CMP-110",
+    "title": "Privacy Incident Reporting",
+    "department": "Compliance",
+    "summary": "Requires every suspected privacy incident, such as a misdirected fax or email, to be reported to the Privacy Office within one business day."
+  },
+  {
+    "id": "cmp-220",
+    "policy": "CMP-220",
+    "title": "Breach Notification",
+    "department": "Compliance",
+    "summary": "Describes the risk assessment that decides whether an incident is a reportable breach and the notification deadlines for members and regulators."
+  },
+  {
+    "id": "cmp-404",
+    "policy": "CMP-404",
+    "title": "Business Associate Agreements",
+    "department": "Compliance",
+    "summary": "Requires a signed BAA before any vendor creates, receives, stores, or transmits PHI for the plan, and names who may sign one."
+  },
+  {
+    "id": "cmp-405",
+    "policy": "CMP-405",
+    "title": "Security Awareness Training",
+    "department": "Compliance",
+    "summary": "Requires annual privacy and security training for every workforce member, with completion tracked by Compliance."
+  },
+  {
+    "id": "cmp-406",
+    "policy": "CMP-406",
+    "title": "Sanctions for Privacy Violations",
+    "department": "Compliance",
+    "summary": "Describes the disciplinary consequences of privacy violations, from retraining to termination, based on intent and harm."
+  },
+  {
+    "id": "cmp-407",
+    "policy": "CMP-407",
+    "title": "Records Retention Schedule",
+    "department": "Compliance",
+    "summary": "Lists how long each type of record is kept, such as claims for ten years, and how records are destroyed at the end."
+  },
+  {
+    "id": "cmp-408",
+    "policy": "CMP-408",
+    "title": "Secure Disposal of PHI",
+    "department": "Compliance",
+    "summary": "Requires shredding of paper PHI in locked bins and certified destruction of drives and devices."
+  },
+  {
+    "id": "cmp-412",
+    "policy": "CMP-412",
+    "title": "Fax Handling Procedure",
+    "department": "Compliance",
+    "summary": "Requires confirming fax numbers, using the cover sheet, sending only necessary pages, and reporting misdirected faxes."
+  },
+  {
+    "id": "cmp-409",
+    "policy": "CMP-409",
+    "title": "Email and Messaging with PHI",
+    "department": "Compliance",
+    "summary": "Requires encryption for external email containing PHI and prohibits PHI in text messages and chat tools that are not approved."
+  },
+  {
+    "id": "cmp-410",
+    "policy": "CMP-410",
+    "title": "De-identification of Data",
+    "department": "Compliance",
+    "summary": "Explains the Safe Harbor and Expert Determination methods and who must approve a de-identified data set before it is shared."
+  },
+  {
+    "id": "cmp-411",
+    "policy": "CMP-411",
+    "title": "Research Use of Member Data",
+    "department": "Compliance",
+    "summary": "Requires Privacy Board approval before member data is used for research, and explains limited data sets and data use agreements."
+  },
+  {
+    "id": "cmp-413",
+    "policy": "CMP-413",
+    "title": "Marketing and Member Communications",
+    "department": "Compliance",
+    "summary": "Explains when marketing to members requires their authorization and which communications are exempt."
+  },
+  {
+    "id": "cmp-414",
+    "policy": "CMP-414",
+    "title": "Conflicts of Interest",
+    "department": "Compliance",
+    "summary": "Requires annual disclosure of outside interests and gifts that could influence business decisions."
+  },
+  {
+    "id": "cmp-415",
+    "policy": "CMP-415",
+    "title": "Gifts and Entertainment",
+    "department": "Compliance",
+    "summary": "Limits gifts from vendors and providers to a small value and prohibits cash or gift cards."
+  },
+  {
+    "id": "cmp-416",
+    "policy": "CMP-416",
+    "title": "Compliance Hotline",
+    "department": "Compliance",
+    "summary": "Describes the anonymous hotline for reporting fraud, privacy, and ethics concerns, and the no-retaliation guarantee."
+  },
+  {
+    "id": "cmp-417",
+    "policy": "CMP-417",
+    "title": "Exclusion List Screening",
+    "department": "Compliance",
+    "summary": "Requires monthly screening of employees, contractors, and providers against federal and state exclusion lists."
+  },
+  {
+    "id": "cmp-418",
+    "policy": "CMP-418",
+    "title": "Regulatory Audits and Inquiries",
+    "department": "Compliance",
+    "summary": "Explains how to respond to a regulator's request: route it to Compliance the same day and do not send documents directly."
+  },
+  {
+    "id": "cmp-419",
+    "policy": "CMP-419",
+    "title": "Accounting of Disclosures",
+    "department": "Compliance",
+    "summary": "Explains a member's right to a list of certain disclosures of their PHI and how Compliance tracks them."
+  },
+  {
+    "id": "cmp-420",
+    "policy": "CMP-420",
+    "title": "Mental Health Parity Compliance",
+    "department": "Compliance",
+    "summary": "Describes how the plan checks that limits on mental health and substance use benefits are no stricter than medical ones."
+  },
+  {
+    "id": "cmp-421",
+    "policy": "CMP-421",
+    "title": "Language Access and Nondiscrimination",
+    "department": "Compliance",
+    "summary": "Describes the notice of nondiscrimination, taglines in other languages, and free interpreter and translation services."
+  },
+  {
+    "id": "cmp-422",
+    "policy": "CMP-422",
+    "title": "Policy Management",
+    "department": "Compliance",
+    "summary": "Explains how policies are written, approved, numbered, reviewed every year, and retired."
+  },
+  {
+    "id": "it-210",
+    "policy": "IT-210",
+    "title": "Acceptable Use of Systems",
+    "department": "IT",
+    "summary": "Sets the rules for using company laptops, email, and internet, including what personal use is allowed and what is monitored."
+  },
+  {
+    "id": "it-501",
+    "policy": "IT-501",
+    "title": "Password and Passphrase Standard",
+    "department": "IT",
+    "summary": "Requires passphrases of at least fourteen characters and multi-factor sign-in, and explains how to reset a forgotten password."
+  },
+  {
+    "id": "it-502",
+    "policy": "IT-502",
+    "title": "Multi-Factor Authentication",
+    "department": "IT",
+    "summary": "Requires multi-factor sign-in for every account, and explains how to set up the authenticator app and what to do with a lost phone."
+  },
+  {
+    "id": "it-503",
+    "policy": "IT-503",
+    "title": "Remote Access and VPN",
+    "department": "IT",
+    "summary": "Explains how to connect to internal systems from home, why public Wi-Fi requires the VPN, and which systems are reachable remotely."
+  },
+  {
+    "id": "it-504",
+    "policy": "IT-504",
+    "title": "Bring Your Own Device",
+    "department": "IT",
+    "summary": "Allows company email on personal phones only with the device management app installed and a screen lock enabled."
+  },
+  {
+    "id": "it-505",
+    "policy": "IT-505",
+    "title": "Laptop Encryption and Lost Devices",
+    "department": "IT",
+    "summary": "Requires full-disk encryption on every laptop and immediate reporting of a lost or stolen device to the service desk."
+  },
+  {
+    "id": "it-506",
+    "policy": "IT-506",
+    "title": "Access Requests and Approvals",
+    "department": "IT",
+    "summary": "Explains how to request access to an application, who approves it, and how access is removed when a role changes."
+  },
+  {
+    "id": "it-507",
+    "policy": "IT-507",
+    "title": "Quarterly Access Reviews",
+    "department": "IT",
+    "summary": "Requires managers to review and confirm their team's application access every quarter."
+  },
+  {
+    "id": "it-508",
+    "policy": "IT-508",
+    "title": "Phishing Reporting",
+    "department": "IT",
+    "summary": "Explains how to recognize a phishing email and report it with the button in Outlook, and what happens next."
+  },
+  {
+    "id": "it-509",
+    "policy": "IT-509",
+    "title": "Software Installation",
+    "department": "IT",
+    "summary": "Allows only approved software from the company portal and explains how to request something new."
+  },
+  {
+    "id": "it-510",
+    "policy": "IT-510",
+    "title": "Generative AI Use",
+    "department": "IT",
+    "summary": "Allows only approved AI tools, prohibits entering PHI or confidential data into consumer chatbots, and names PriorAuthBot as the approved internal assistant."
+  },
+  {
+    "id": "it-511",
+    "policy": "IT-511",
+    "title": "Data Classification",
+    "department": "IT",
+    "summary": "Defines the four classification levels, Public, Internal, Confidential, and Restricted, with examples of each."
+  },
+  {
+    "id": "it-512",
+    "policy": "IT-512",
+    "title": "Backup and Recovery",
+    "department": "IT",
+    "summary": "Describes how often systems are backed up, how long backups are kept, and how restores are tested."
+  },
+  {
+    "id": "it-513",
+    "policy": "IT-513",
+    "title": "Change Management",
+    "department": "IT",
+    "summary": "Requires a reviewed and approved change ticket for production changes, with an emergency process for outages."
+  },
+  {
+    "id": "it-514",
+    "policy": "IT-514",
+    "title": "Incident Response",
+    "department": "IT",
+    "summary": "Describes how security incidents are detected, triaged, contained, and reported, and who is on the response team."
+  },
+  {
+    "id": "it-515",
+    "policy": "IT-515",
+    "title": "Vendor Security Reviews",
+    "department": "IT",
+    "summary": "Requires a security review before buying any software or service that will store company or member data."
+  },
+  {
+    "id": "it-516",
+    "policy": "IT-516",
+    "title": "Logging and Monitoring",
+    "department": "IT",
+    "summary": "Describes which systems send logs to the security monitoring platform and how long logs are kept."
+  },
+  {
+    "id": "it-517",
+    "policy": "IT-517",
+    "title": "Vulnerability Management",
+    "department": "IT",
+    "summary": "Sets patching deadlines by severity, such as fourteen days for critical vulnerabilities."
+  },
+  {
+    "id": "it-518",
+    "policy": "IT-518",
+    "title": "Service Desk Support",
+    "department": "IT",
+    "summary": "Explains how to open a ticket, the support hours, and response targets by priority."
+  },
+  {
+    "id": "it-519",
+    "policy": "IT-519",
+    "title": "Printing and Scanning",
+    "department": "IT",
+    "summary": "Requires secure release printing for documents with PHI and explains scan-to-email limits."
+  },
+  {
+    "id": "it-520",
+    "policy": "IT-520",
+    "title": "Collaboration Tools",
+    "department": "IT",
+    "summary": "Lists the approved chat, meeting, and file-sharing tools and the rules for sharing files with outside parties."
+  },
+  {
+    "id": "it-521",
+    "policy": "IT-521",
+    "title": "Shared Mailboxes",
+    "department": "IT",
+    "summary": "Explains how to request a shared mailbox and who owns access to it."
+  },
+  {
+    "id": "it-522",
+    "policy": "IT-522",
+    "title": "Developer Secure Coding Standard",
+    "department": "IT",
+    "summary": "Requires code review, dependency scanning, and secrets in a vault rather than in source code."
+  },
+  {
+    "id": "it-523",
+    "policy": "IT-523",
+    "title": "Cloud Usage",
+    "department": "IT",
+    "summary": "Requires all cloud resources to be created in company subscriptions with tagging, and prohibits personal cloud accounts for work data."
+  },
+  {
+    "id": "fin-118",
+    "policy": "FIN-118",
+    "title": "Business Travel",
+    "department": "AllStaff",
+    "summary": "Explains how to book travel through the company travel tool, the hotel and meal limits, and how to submit expenses within thirty days."
+  },
+  {
+    "id": "fin-220",
+    "policy": "FIN-220",
+    "title": "Expense Reimbursement",
+    "department": "AllStaff",
+    "summary": "Lists what can be expensed, the receipts required, and how quickly reimbursements are paid."
+  },
+  {
+    "id": "gen-601",
+    "policy": "GEN-601",
+    "title": "Corporate Credit Cards",
+    "department": "AllStaff",
+    "summary": "Explains who receives a corporate card, what it can be used for, and the monthly reconciliation deadline."
+  },
+  {
+    "id": "gen-602",
+    "policy": "GEN-602",
+    "title": "Office Access and Badges",
+    "department": "AllStaff",
+    "summary": "Requires badges to be worn and never shared, and explains how visitors are signed in and escorted."
+  },
+  {
+    "id": "gen-603",
+    "policy": "GEN-603",
+    "title": "Visitors in the Office",
+    "department": "AllStaff",
+    "summary": "Visitors sign in at reception, wear a visitor badge, and stay with their host, and may not enter areas where PHI is handled."
+  },
+  {
+    "id": "gen-604",
+    "policy": "GEN-604",
+    "title": "Emergency Evacuation",
+    "department": "AllStaff",
+    "summary": "Describes fire alarms, evacuation routes, and assembly points for each office."
+  },
+  {
+    "id": "gen-605",
+    "policy": "GEN-605",
+    "title": "Inclement Weather",
+    "department": "AllStaff",
+    "summary": "Explains how office closures are announced and when employees should work from home."
+  },
+  {
+    "id": "gen-606",
+    "policy": "GEN-606",
+    "title": "Social Media",
+    "department": "AllStaff",
+    "summary": "Explains what employees may and may not post about the company, members, and coworkers."
+  },
+  {
+    "id": "gen-607",
+    "policy": "GEN-607",
+    "title": "Media Inquiries",
+    "department": "AllStaff",
+    "summary": "Requires that all questions from reporters be sent to Communications without comment."
+  },
+  {
+    "id": "gen-608",
+    "policy": "GEN-608",
+    "title": "Charitable Giving and Volunteering",
+    "department": "AllStaff",
+    "summary": "Provides one paid volunteer day per year and a donation match up to a yearly limit."
+  },
+  {
+    "id": "gen-609",
+    "policy": "GEN-609",
+    "title": "Company Vehicles",
+    "department": "AllStaff",
+    "summary": "Lists who may drive a company vehicle, the insurance requirements, and how to report an accident."
+  },
+  {
+    "id": "gen-610",
+    "policy": "GEN-610",
+    "title": "Mail and Shipping",
+    "department": "AllStaff",
+    "summary": "Explains how to send overnight packages and certified mail, and how incoming mail with PHI is handled."
+  },
+  {
+    "id": "gen-611",
+    "policy": "GEN-611",
+    "title": "Purchasing and Approval Limits",
+    "department": "AllStaff",
+    "summary": "Lists who may approve purchases at each amount and when a purchase order is required."
+  },
+  {
+    "id": "gen-612",
+    "policy": "GEN-612",
+    "title": "Records Requests from Employees",
+    "department": "AllStaff",
+    "summary": "Explains how employees request employment verification letters and copies of tax forms."
+  },
+  {
+    "id": "gen-613",
+    "policy": "GEN-613",
+    "title": "Recycling and Sustainability",
+    "department": "AllStaff",
+    "summary": "Describes office recycling and the program to reduce printing."
+  },
+  {
+    "id": "gen-614",
+    "policy": "GEN-614",
+    "title": "Parking and Commuting",
+    "department": "AllStaff",
+    "summary": "Explains parking permits at each office and the pre-tax transit benefit."
+  },
+  {
+    "id": "gen-615",
+    "policy": "GEN-615",
+    "title": "Food in the Office",
+    "department": "AllStaff",
+    "summary": "Explains kitchen rules and the policy on catered meetings."
+  },
+  {
+    "id": "gen-616",
+    "policy": "GEN-616",
+    "title": "Employee Directory",
+    "department": "AllStaff",
+    "summary": "Explains how to update your title, phone, and photo in the directory."
+  },
+  {
+    "id": "gen-617",
+    "policy": "GEN-617",
+    "title": "Holiday Gifts to Members and Providers",
+    "department": "AllStaff",
+    "summary": "Prohibits gifts to members and limits gifts to providers to items of nominal value."
+  },
+  {
+    "id": "gen-618",
+    "policy": "GEN-618",
+    "title": "Company Events",
+    "department": "AllStaff",
+    "summary": "Covers conduct, alcohol, and expense rules for company-sponsored events."
+  },
+  {
+    "id": "um-512",
+    "policy": "UM-512",
+    "title": "Coverage criteria: MRI of the lumbar spine",
+    "department": "Claims",
+    "summary": "Prior authorization is required for MRI of the lumbar spine (CPT 72148). It is approved after six weeks of documented conservative treatment, unless red-flag symptoms are present."
+  },
+  {
+    "id": "cov-701",
+    "policy": "COV-701",
+    "title": "Coverage criteria: MRI of the brain",
+    "department": "Claims",
+    "summary": "Prior authorization is required for MRI of the brain (CPT 70553). It is approved for new neurological deficits, suspected tumor, or seizures not explained by prior imaging."
+  },
+  {
+    "id": "cov-702",
+    "policy": "COV-702",
+    "title": "Coverage criteria: CT of the abdomen and pelvis",
+    "department": "Claims",
+    "summary": "Prior authorization is required for CT of the abdomen and pelvis (CPT 74177). It is approved when ultrasound is not diagnostic or not appropriate for the suspected condition."
+  },
+  {
+    "id": "cov-703",
+    "policy": "COV-703",
+    "title": "Coverage criteria: PET scan for cancer staging",
+    "department": "Claims",
+    "summary": "Prior authorization is required for PET scan for cancer staging (CPT 78815). It is approved for initial staging and restaging of cancers where it changes management."
+  },
+  {
+    "id": "cov-704",
+    "policy": "COV-704",
+    "title": "Coverage criteria: Knee arthroscopy",
+    "department": "Claims",
+    "summary": "Prior authorization is required for knee arthroscopy (CPT 29881). It is approved for mechanical symptoms with imaging-confirmed meniscal tear after failed physical therapy."
+  },
+  {
+    "id": "cov-705",
+    "policy": "COV-705",
+    "title": "Coverage criteria: Total knee replacement",
+    "department": "Claims",
+    "summary": "Prior authorization is required for total knee replacement (CPT 27447). It is approved for advanced arthritis with functional limitation after conservative treatment."
+  },
+  {
+    "id": "cov-706",
+    "policy": "COV-706",
+    "title": "Coverage criteria: Total hip replacement",
+    "department": "Claims",
+    "summary": "Prior authorization is required for total hip replacement (CPT 27130). It is approved for advanced arthritis or avascular necrosis with documented functional limitation."
+  },
+  {
+    "id": "cov-707",
+    "policy": "COV-707",
+    "title": "Coverage criteria: Lumbar spinal fusion",
+    "department": "Claims",
+    "summary": "Prior authorization is required for lumbar spinal fusion (CPT 22612). It is approved for instability or deformity with neurological findings, after a shared decision-making visit."
+  },
+  {
+    "id": "cov-708",
+    "policy": "COV-708",
+    "title": "Coverage criteria: Bariatric surgery (sleeve gastrectomy)",
+    "department": "Claims",
+    "summary": "Prior authorization is required for bariatric surgery (sleeve gastrectomy) (CPT 43775). It is approved for adults meeting body mass index criteria who completed a supervised weight management program."
+  },
+  {
+    "id": "cov-709",
+    "policy": "COV-709",
+    "title": "Coverage criteria: Sleep study in a lab",
+    "department": "Claims",
+    "summary": "Prior authorization is required for sleep study in a lab (CPT 95810). It is approved when a home sleep test is not appropriate or was inconclusive."
+  },
+  {
+    "id": "cov-710",
+    "policy": "COV-710",
+    "title": "Coverage criteria: Home sleep apnea test",
+    "department": "Claims",
+    "summary": "Prior authorization is required for home sleep apnea test (CPT 95806). It is approved for adults with suspected moderate to severe obstructive sleep apnea."
+  },
+  {
+    "id": "cov-711",
+    "policy": "COV-711",
+    "title": "Coverage criteria: CPAP device",
+    "department": "Claims",
+    "summary": "Prior authorization is required for CPAP device (HCPCS E0601). It is approved after a sleep study confirms obstructive sleep apnea; continued coverage requires adherence data."
+  },
+  {
+    "id": "cov-712",
+    "policy": "COV-712",
+    "title": "Coverage criteria: Outpatient physical therapy beyond 20 visits",
+    "department": "Claims",
+    "summary": "Prior authorization is required for outpatient physical therapy beyond 20 visits (CPT 97110). It is approved with documented functional progress toward measurable goals."
+  },
+  {
+    "id": "cov-713",
+    "policy": "COV-713",
+    "title": "Coverage criteria: Speech therapy",
+    "department": "Claims",
+    "summary": "Prior authorization is required for speech therapy (CPT 92507). It is approved for speech or swallowing disorders with a treatment plan and measurable goals."
+  },
+  {
+    "id": "cov-714",
+    "policy": "COV-714",
+    "title": "Coverage criteria: Genetic testing for hereditary cancer (BRCA1/BRCA2)",
+    "department": "Claims",
+    "summary": "Prior authorization is required for genetic testing for hereditary cancer (brca1/brca2) (CPT 81162). It is approved when personal or family history meets national testing criteria and results will change care."
+  },
+  {
+    "id": "cov-715",
+    "policy": "COV-715",
+    "title": "Coverage criteria: Upper endoscopy",
+    "department": "Claims",
+    "summary": "Prior authorization is required for upper endoscopy (CPT 43239). It is approved for persistent symptoms, alarm features, or surveillance of known conditions."
+  },
+  {
+    "id": "cov-716",
+    "policy": "COV-716",
+    "title": "Coverage criteria: Colonoscopy (diagnostic)",
+    "department": "Claims",
+    "summary": "Prior authorization is required for colonoscopy (diagnostic) (CPT 45378). It is approved for symptoms or abnormal screening results; screening colonoscopy needs no authorization."
+  },
+  {
+    "id": "cov-717",
+    "policy": "COV-717",
+    "title": "Coverage criteria: Cardiac catheterization",
+    "department": "Claims",
+    "summary": "Prior authorization is required for cardiac catheterization (CPT 93458). It is approved for suspected coronary disease with positive or inconclusive noninvasive testing."
+  },
+  {
+    "id": "cov-718",
+    "policy": "COV-718",
+    "title": "Coverage criteria: Echocardiogram (transthoracic)",
+    "department": "Claims",
+    "summary": "Prior authorization is required for echocardiogram (transthoracic) (CPT 93306). It is approved for new symptoms, murmurs, or changes in known heart disease."
+  },
+  {
+    "id": "cov-719",
+    "policy": "COV-719",
+    "title": "Coverage criteria: Cardiac stress test with imaging",
+    "department": "Claims",
+    "summary": "Prior authorization is required for cardiac stress test with imaging (CPT 78452). It is approved when a standard exercise test is not possible or not diagnostic."
+  },
+  {
+    "id": "cov-720",
+    "policy": "COV-720",
+    "title": "Coverage criteria: Spinal cord stimulator trial",
+    "department": "Claims",
+    "summary": "Prior authorization is required for spinal cord stimulator trial (CPT 63650). It is approved for chronic pain after failed conservative and surgical treatment, with a psychological evaluation."
+  },
+  {
+    "id": "cov-721",
+    "policy": "COV-721",
+    "title": "Coverage criteria: Epidural steroid injection",
+    "department": "Claims",
+    "summary": "Prior authorization is required for epidural steroid injection (CPT 62323). It is approved for radicular pain with imaging correlation, limited to a set number per year."
+  },
+  {
+    "id": "cov-722",
+    "policy": "COV-722",
+    "title": "Coverage criteria: Radiofrequency ablation of spinal nerves",
+    "department": "Claims",
+    "summary": "Prior authorization is required for radiofrequency ablation of spinal nerves (CPT 64635). It is approved after two positive diagnostic medial branch blocks."
+  },
+  {
+    "id": "cov-723",
+    "policy": "COV-723",
+    "title": "Coverage criteria: Cataract surgery",
+    "department": "Claims",
+    "summary": "Prior authorization is required for cataract surgery (CPT 66984). It is approved when vision loss limits daily activities and cannot be corrected with glasses."
+  },
+  {
+    "id": "cov-724",
+    "policy": "COV-724",
+    "title": "Coverage criteria: Hysterectomy (laparoscopic)",
+    "department": "Claims",
+    "summary": "Prior authorization is required for hysterectomy (laparoscopic) (CPT 58571). It is approved after documented failure or contraindication of less invasive treatment."
+  },
+  {
+    "id": "cov-725",
+    "policy": "COV-725",
+    "title": "Coverage criteria: Septoplasty",
+    "department": "Claims",
+    "summary": "Prior authorization is required for septoplasty (CPT 30520). It is approved for nasal obstruction with documented failure of medical therapy."
+  },
+  {
+    "id": "cov-726",
+    "policy": "COV-726",
+    "title": "Coverage criteria: Tonsillectomy for adults",
+    "department": "Claims",
+    "summary": "Prior authorization is required for tonsillectomy for adults (CPT 42826). It is approved for recurrent tonsillitis meeting frequency criteria or for obstructive symptoms."
+  },
+  {
+    "id": "cov-727",
+    "policy": "COV-727",
+    "title": "Coverage criteria: Varicose vein ablation",
+    "department": "Claims",
+    "summary": "Prior authorization is required for varicose vein ablation (CPT 36475). It is approved for symptomatic venous reflux after a trial of compression stockings."
+  },
+  {
+    "id": "cov-728",
+    "policy": "COV-728",
+    "title": "Coverage criteria: Hyperbaric oxygen therapy",
+    "department": "Claims",
+    "summary": "Prior authorization is required for hyperbaric oxygen therapy (CPT 99183). It is approved for specific approved indications such as non-healing diabetic foot ulcers."
+  },
+  {
+    "id": "cov-729",
+    "policy": "COV-729",
+    "title": "Coverage criteria: Inpatient rehabilitation admission",
+    "department": "Claims",
+    "summary": "Prior authorization is required for inpatient rehabilitation admission. It is approved when the member needs and can tolerate intensive therapy three hours a day."
+  },
+  {
+    "id": "cov-730",
+    "policy": "COV-730",
+    "title": "Coverage criteria: Skilled nursing facility admission",
+    "department": "Claims",
+    "summary": "Prior authorization is required for skilled nursing facility admission. It is approved after a qualifying need for daily skilled care that cannot be provided at home."
+  },
+  {
+    "id": "cov-731",
+    "policy": "COV-731",
+    "title": "Coverage criteria: Home infusion therapy",
+    "department": "Claims",
+    "summary": "Prior authorization is required for home infusion therapy (CPT 99601). It is approved for intravenous drugs that can be safely given at home with nursing support."
+  },
+  {
+    "id": "cov-732",
+    "policy": "COV-732",
+    "title": "Coverage criteria: Proton beam therapy",
+    "department": "Claims",
+    "summary": "Prior authorization is required for proton beam therapy (CPT 77520). It is approved for tumors near critical structures where the dose benefit over standard radiation is documented."
+  },
+  {
+    "id": "cov-733",
+    "policy": "COV-733",
+    "title": "Coverage criteria: Insulin pump",
+    "department": "Claims",
+    "summary": "Prior authorization is required for insulin pump (HCPCS E0784). It is approved for members with diabetes on multiple daily injections who meet monitoring criteria."
+  },
+  {
+    "id": "cov-734",
+    "policy": "COV-734",
+    "title": "Coverage criteria: Continuous glucose monitor",
+    "department": "Claims",
+    "summary": "Prior authorization is required for continuous glucose monitor (HCPCS A9276). It is approved for members on insulin or with documented problematic hypoglycemia."
+  },
+  {
+    "id": "cov-735",
+    "policy": "COV-735",
+    "title": "Coverage criteria: Power wheelchair",
+    "department": "Claims",
+    "summary": "Prior authorization is required for power wheelchair (HCPCS K0823). It is approved when a manual wheelchair or scooter cannot meet the member's mobility needs at home."
+  },
+  {
+    "id": "cov-736",
+    "policy": "COV-736",
+    "title": "Coverage criteria: Applied behavior analysis for autism",
+    "department": "Claims",
+    "summary": "Prior authorization is required for applied behavior analysis for autism (CPT 97153). It is approved with a diagnosis, a treatment plan, and progress reviews every six months."
+  },
+  {
+    "id": "cov-737",
+    "policy": "COV-737",
+    "title": "Coverage criteria: Transcranial magnetic stimulation for depression",
+    "department": "Claims",
+    "summary": "Prior authorization is required for transcranial magnetic stimulation for depression (CPT 90867). It is approved after at least two failed antidepressant trials and psychotherapy."
+  },
+  {
+    "id": "cov-738",
+    "policy": "COV-738",
+    "title": "Coverage criteria: Residential substance use treatment",
+    "department": "Claims",
+    "summary": "Prior authorization is required for residential substance use treatment (HCPCS H0018). It is approved when withdrawal risk or relapse history makes outpatient care unsafe."
+  },
+  {
+    "id": "cov-739",
+    "policy": "COV-739",
+    "title": "Coverage criteria: Gender-affirming surgery",
+    "department": "Claims",
+    "summary": "Prior authorization is required for gender-affirming surgery. It is approved with documentation from treating clinicians that national criteria are met."
+  }
+]

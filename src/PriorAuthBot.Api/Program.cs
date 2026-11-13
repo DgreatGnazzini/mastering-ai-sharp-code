@@ -12,6 +12,7 @@ using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
 using PriorAuthBot.Core.Rag;
 using PriorAuthBot.Core.Retrieval;
+using PriorAuthBot.Core.Search;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOptions<IngestionWorkerOptions>().Bind(builder.Configuration.GetSection(IngestionWorkerOptions.SectionName));
 builder.Services.AddSingleton<IngestionWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<IngestionWorker>());
+
+// The policy catalog (chapter 5): about 200 summaries, embedded on first use and searched in memory.
+builder.Services.AddOptions<CatalogOptions>().Bind(builder.Configuration.GetSection(CatalogOptions.SectionName));
+builder.Services.AddSingleton(sp => new PolicyCatalog(
+    sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>(),
+    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CatalogOptions>>().Value));
 
 // Intake forms (chapter 4): the member directory the extracted fields are checked against.
 builder.Services.AddOptions<IntakeOptions>().Bind(builder.Configuration.GetSection(IntakeOptions.SectionName));
@@ -119,7 +126,19 @@ api.MapPost("/classify", async (ClassifyRequest request, QuestionClassifier clas
 // A bearer-token API has no cookies to forge, so the form upload needs no antiforgery token.
 api.MapPost("/intake", IntakeEndpoint.HandleAsync).DisableAntiforgery();
 
-// Chapters 5 and 6: permission-aware search, showing what the caller is allowed to retrieve.
+// Chapter 5: semantic search over the policy catalog, which every employee may read.
+api.MapPost("/catalog/search", async (CatalogSearchRequest request, PolicyCatalog catalog, Microsoft.Extensions.Options.IOptions<CatalogOptions> options, IHostEnvironment environment, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Query) || request.Query.Length > 500)
+    {
+        return Results.Problem("Send a query of 1 to 500 characters.", statusCode: StatusCodes.Status400BadRequest);
+    }
+
+    await catalog.EnsureBuiltAsync(Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.Value.Path)), cancellationToken);
+    return Results.Ok(await catalog.SearchAsync(request.Query, Math.Clamp(request.Top ?? options.Value.Top, 1, 20), cancellationToken));
+});
+
+// Chapters 6 and 7: permission-aware search, showing what the caller is allowed to retrieve.
 api.MapPost("/search", async (SearchRequest request, ClaimsPrincipal user, CallerIdentityFactory identities, SecureRetriever retriever, CancellationToken cancellationToken) =>
 {
     var caller = identities.Create(user);
