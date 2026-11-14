@@ -1,0 +1,11 @@
+{
+  "title": "Formulary Exception Process",
+  "policy": "PHR-310",
+  "department": "Claims",
+  "allowedGroups": [
+    "Clinical",
+    "Claims"
+  ],
+  "sensitivity": "Confidential",
+  "phi": false
+}

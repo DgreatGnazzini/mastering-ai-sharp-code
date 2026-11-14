@@ -5,6 +5,7 @@
 #   docker compose up -d
 #   docker compose exec ollama ollama pull nomic-embed-text:v1.5
 #   docker compose exec ollama ollama pull llama3.2:3b
+#   docker compose exec ollama ollama pull qwen2.5vl:3b    (chapter 4: scans and intake forms)
 services:
   postgres:
     image: pgvector/pgvector:0.8.7-pg17-trixie

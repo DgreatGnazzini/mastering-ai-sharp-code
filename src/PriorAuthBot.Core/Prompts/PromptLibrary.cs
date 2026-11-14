@@ -15,6 +15,7 @@ public static partial class PromptLibrary
 {
     public const string ClassifyQuestion = "classify-question.v1";
     public const string GroundedAnswer = "grounded-answer.v1";
+    public const string ExtractIntakeForm = "extract-intake-form.v1";
 
     private static readonly ConcurrentDictionary<string, string> Cache = new();
 

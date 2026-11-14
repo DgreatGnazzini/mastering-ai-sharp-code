@@ -7,7 +7,10 @@ public sealed class IngestionWorkerOptions
 {
     public const string SectionName = "Ingestion";
 
-    /// <summary>Folder of Markdown policies, relative to the content root unless absolute.</summary>
+    /// <summary>
+    /// Folder of policies, relative to the content root unless absolute. Markdown, PDF, Word, and
+    /// scanned files are all read (chapter 4); point it at samples/files to try the other formats.
+    /// </summary>
     public string DocumentsPath { get; set; } = "../../samples/documents";
 
     /// <summary>
@@ -20,6 +23,7 @@ public sealed class IngestionWorkerOptions
 /// <summary>Runs the ingestion pipeline at startup and then on a timer (chapter 7).</summary>
 public sealed partial class IngestionWorker(
     IngestionPipeline pipeline,
+    DocumentLoader loader,
     Microsoft.Extensions.Options.IOptions<IngestionWorkerOptions> options,
     IHostEnvironment environment,
     ILogger<IngestionWorker> logger) : BackgroundService
@@ -37,7 +41,7 @@ public sealed partial class IngestionWorker(
         {
             try
             {
-                await pipeline.SyncAsync(MarkdownDocumentLoader.LoadDirectoryAsync(path, stoppingToken), stoppingToken);
+                await pipeline.SyncAsync(loader.LoadDirectoryAsync(path, stoppingToken), stoppingToken);
                 _firstRun.TrySetResult();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

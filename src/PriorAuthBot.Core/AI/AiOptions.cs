@@ -27,6 +27,16 @@ public sealed class AiOptions
     /// so turn it on only where that data is allowed to sit (see chapter 2's security review).
     /// </summary>
     public bool CacheResponses { get; set; }
+
+    /// <summary>
+    /// Whether this provider may receive PHI (chapter 4). Leave it unset to get the default: true for
+    /// Ollama and Offline, which run on your own machines, and false for hosted providers. Set it to
+    /// true for Azure OpenAI only once a business associate agreement covers the subscription.
+    /// When false, text is redacted and images are refused before any request leaves.
+    /// </summary>
+    public bool? ApprovedForPhi { get; set; }
+
+    public bool IsApprovedForPhi => ApprovedForPhi ?? Provider is "Ollama" or "Offline";
 }
 
 public sealed class OllamaOptions
@@ -40,6 +50,16 @@ public sealed class OllamaOptions
 
     /// <summary>nomic-embed-text returns 768 dimensions, which matches <see cref="Retrieval.ChunkRecord"/>.</summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text:v1.5";
+
+    /// <summary>A model that accepts images, for OCR and form extraction (chapter 4).</summary>
+    public string VisionModel { get; set; } = "qwen2.5vl:3b";
+
+    /// <summary>
+    /// Context window for the vision model, in tokens. Ollama defaults to 4,096. Image tokens grow with
+    /// pixels: a letter page at 100 dpi is about 1,200 for qwen2.5vl, and at 200 dpi about 4,100, which
+    /// Ollama refuses before the model reads anything. 8,192 leaves room for a sharper scan.
+    /// </summary>
+    public int VisionContextLength { get; set; } = 8192;
 
     /// <summary>
     /// Local models on a CPU can take minutes to read a long prompt. HttpClient's default of
@@ -58,6 +78,9 @@ public sealed class AzureOpenAIOptions
 
     public string? ClassifierDeployment { get; set; }
 
+    /// <summary>A deployment that accepts images. Empty means "use <see cref="ChatDeployment"/>", which does for GPT-4.1 models.</summary>
+    public string? VisionDeployment { get; set; }
+
     public string EmbeddingDeployment { get; set; } = "text-embedding-3-small";
 }
 
@@ -69,6 +92,8 @@ public sealed class OpenAIOptions
     public string ChatModel { get; set; } = "gpt-4.1-mini";
 
     public string? ClassifierModel { get; set; }
+
+    public string? VisionModel { get; set; }
 
     public string EmbeddingModel { get; set; } = "text-embedding-3-small";
 }
