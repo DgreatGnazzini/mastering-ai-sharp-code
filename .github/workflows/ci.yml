@@ -94,6 +94,10 @@ jobs:
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Pgvector" --output Detailed
 
+      - name: Show the Ollama log if a step failed
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP/ollama.log" || true
+
       - name: Add the reports to the job summary
         if: always()
         run: |
@@ -133,6 +137,10 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Qdrant" --output Detailed
+
+      - name: Show the Ollama log if a step failed
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP/ollama.log" || true
 
       - name: Add the reports to the job summary
         if: always()
@@ -224,11 +232,33 @@ jobs:
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveHybridSearchTests" --output Detailed
 
+      # The vision model is the last of five to load, on a runner with about 8 GB of memory. In two
+      # runs on PR #8 the runner shut down and then Ollama stopped during that step, with every earlier
+      # step green.
+      # Unload the other models first, and restart Ollama if it has already gone.
+      - name: Unload the other models before the vision model
+        if: always()
+        run: |
+          free -h
+          if ! curl -sf http://localhost:11434/api/version > /dev/null; then
+            echo "Ollama is not running. The end of its log:"
+            tail -n 50 "$RUNNER_TEMP/ollama.log" || true
+            sudo dmesg | grep -i -E "out of memory|oom" | tail -n 5 || true
+            nohup ollama serve >> "$RUNNER_TEMP/ollama.log" 2>&1 &
+            for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          fi
+          for model in $(ollama ps | awk 'NR > 1 { print $1 }'); do ollama stop "$model"; done
+          free -h
+
       - name: Read scans with a vision model (chapter 4)
         if: always()
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveIntakeTests" --output Detailed
+
+      - name: Show the Ollama log if a step failed
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP/ollama.log" || true
 
       - name: Add the reports to the job summary
         if: always()
