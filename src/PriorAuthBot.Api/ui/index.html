@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PriorAuthBot 3000</title>
+<!--
+  Chapter 8: the smallest UI that shows an answer with its citations. Development only: it signs in
+  as a demo persona with the X-Demo-User header. Every link goes through /documents/{id}, which
+  checks the persona's groups again.
+-->
+<style>
+  :root { color-scheme: light dark; --fg: #1d2330; --muted: #5b6475; --line: #d9dde5; --bg: #fbfbfd; --accent: #2457c5; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e6e9ef; --muted: #9aa3b5; --line: #343a46; --bg: #15181e; --accent: #7aa2ff; } }
+  body { font: 16px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 52rem; padding: 1.5rem 1rem; color: var(--fg); background: var(--bg); }
+  h1 { font-size: 1.4rem; margin: 0 0 .25rem; } .tag { color: var(--muted); margin: 0 0 1.25rem; }
+  form { display: flex; gap: .5rem; flex-wrap: wrap; }
+  input[type=text] { flex: 1 1 20rem; padding: .55rem .7rem; font: inherit; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+  select, button { font: inherit; padding: .5rem .8rem; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: inherit; }
+  button { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
+  .answer { margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--line); border-radius: 8px; white-space: pre-wrap; }
+  .answer sup a { text-decoration: none; }
+  ol.sources { margin: .75rem 0 0; padding-left: 1.5rem; color: var(--muted); }
+  ol.sources a { color: var(--accent); }
+  .doc { margin-top: 1.25rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  .doc section { margin-bottom: 1rem; } .doc section:target { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+  .doc h3 { font-size: 1rem; margin: 0 0 .25rem; } .doc p { margin: 0; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>PriorAuthBot 3000</h1>
+<p class="tag">Approves everything, eventually. Answers come only from documents you can open.</p>
+<form id="ask">
+  <select id="user" aria-label="Signed in as">
+    <option value="nurse">Nina Okafor, RN</option>
+    <option value="claims">Marcus Reyes, claims</option>
+    <option value="hr">Priya Shah, HR</option>
+    <option value="compliance">Dana Whitfield, privacy</option>
+    <option value="contractor">Casey Lin, contractor</option>
+  </select>
+  <input id="question" type="text" placeholder="Ask about a policy, such as: Does CPT 72148 need prior authorization?" required maxlength="500">
+  <button>Ask</button>
+</form>
+<div id="out"></div>
+<script>
+const out = document.getElementById('out');
+const user = () => document.getElementById('user').value;
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+document.getElementById('ask').addEventListener('submit', async e => {
+  e.preventDefault();
+  out.innerHTML = '<p class="tag">Thinking…</p>';
+  const res = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Demo-User': user() }, body: JSON.stringify({ question: document.getElementById('question').value }) });
+  if (!res.ok) { out.innerHTML = `<p class="tag">Request failed: ${res.status}</p>`; return; }
+  const answer = await res.json();
+  const cited = answer.sources.filter(s => s.cited);
+  const shown = cited.length ? cited : answer.sources;
+  const text = esc(answer.answer).replace(/\[(\d+)\]/g, (m, n) => `<sup><a href="#src-${n}">[${n}]</a></sup>`);
+  const list = shown.map(s => `<li value="${s.number}" id="src-${s.number}"><a href="${esc(s.link)}" data-doc="${esc(s.link)}">${esc(s.title)}</a>${s.policyNumber ? ' (' + esc(s.policyNumber) + ')' : ''}${s.section ? ', ' + esc(s.section) : ''}${s.page ? ', page ' + s.page : ''}</li>`).join('');
+  out.innerHTML = `<div class="answer">${text}${shown.length ? '<ol class="sources">' + list + '</ol>' : ''}</div><div id="doc"></div>`;
+});
+
+// Citation links open the cited document below the answer, scrolled to the cited section.
+out.addEventListener('click', async e => {
+  const link = e.target.closest('a[data-doc]');
+  if (!link) return;
+  e.preventDefault();
+  const [path, anchor] = link.dataset.doc.split('#');
+  const res = await fetch(path, { headers: { 'X-Demo-User': user() } });
+  const doc = document.getElementById('doc');
+  if (!res.ok) { doc.innerHTML = '<p class="tag">Not found.</p>'; return; }
+  const d = await res.json();
+  doc.innerHTML = `<div class="doc"><h2>${esc(d.title)}${d.policyNumber ? ' (' + esc(d.policyNumber) + ')' : ''}</h2>` +
+    d.sections.map(s => `<section id="${esc(s.anchor)}"><h3>${esc(s.section || 'Text')}${s.page ? ' · page ' + s.page : ''}</h3><p>${esc(s.text)}</p></section>`).join('') + '</div>';
+  const target = anchor && document.getElementById(anchor);
+  (target || doc).scrollIntoView({ behavior: 'smooth' });
+  if (target) location.hash = anchor;
+});
+</script>
+</body>
+</html>

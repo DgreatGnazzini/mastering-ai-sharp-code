@@ -19,6 +19,9 @@ public abstract class VectorStoreIntegrationTests : IAsyncLifetime
 
     protected abstract Dictionary<string, string?> Settings { get; }
 
+    /// <summary>Whether PriorAuthBot has a keyword side for this store yet (chapter 8).</summary>
+    protected virtual bool HasKeywordSearch => false;
+
     private RagTestHost Host => _host ?? throw new InvalidOperationException("Not initialized.");
 
     public async ValueTask InitializeAsync()
@@ -70,6 +73,21 @@ public abstract class VectorStoreIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task KeywordSearchFindsCodesOnlyForCallersWhoMaySeeThem()
+    {
+        Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);
+        Assert.SkipUnless(HasKeywordSearch, "No keyword side for this store yet.");
+        var keywords = Host.Get<Core.Retrieval.Keyword.IKeywordSearch>();
+
+        var claims = await keywords.SearchAsync("Is CPT 72148 covered?", Set.Users["claims"], 10, TestContext.Current.CancellationToken);
+        var contractor = await keywords.SearchAsync("Is CPT 72148 covered?", Set.Users["contractor"], 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal("prior-auth-lumbar-mri", claims[0].DocumentId);
+        Assert.DoesNotContain(contractor, r => r.DocumentId == "prior-auth-lumbar-mri");
+        Assert.All(contractor, r => Assert.Contains("Contractors", r.AllowedGroups));
+    }
+
+    [Fact]
     public async Task CallerWithNoGroupsGetsNothing()
     {
         Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);
@@ -101,6 +119,8 @@ public sealed class PostgresIntegrationTests : VectorStoreIntegrationTests
         ["VectorStore:Provider"] = "Postgres",
         ["ConnectionStrings:priorauthbot"] = LiveSettings.Postgres,
     };
+
+    protected override bool HasKeywordSearch => true;
 }
 
 /// <summary>Qdrant: the group filter becomes a payload filter on an indexed keyword field.</summary>

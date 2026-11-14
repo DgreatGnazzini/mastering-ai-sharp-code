@@ -435,3 +435,6 @@ appsettings.Development.json
 
 # Snapshot tests write this on a mismatch (chapter 3)
 *.received.txt
+
+# Chapter 8: the cross-encoder reranker, downloaded by scripts/get-reranker.sh
+models/

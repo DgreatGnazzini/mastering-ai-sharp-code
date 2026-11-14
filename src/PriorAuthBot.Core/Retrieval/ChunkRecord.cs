@@ -52,6 +52,18 @@ public sealed class ChunkRecord
     [VectorStoreData]
     public string SourcePath { get; set; } = string.Empty;
 
+    /// <summary>The page the chunk starts on, for PDFs and scans (chapter 8). Null for formats without pages.</summary>
+    [VectorStoreData]
+    public int? Page { get; set; }
+
+    /// <summary>
+    /// What keyword search matches against (chapter 8): policy number, title, section, and text, the
+    /// same material that is embedded. Marked full-text indexed, so pgvector creates a GIN index on
+    /// <c>to_tsvector('english', "SearchText")</c> and Azure AI Search makes the field searchable.
+    /// </summary>
+    [VectorStoreData(IsFullTextIndexed = true)]
+    public string SearchText { get; set; } = string.Empty;
+
     // Security metadata (chapter 6). Copied from the source document's ACL at ingestion.
 
     [VectorStoreData(IsIndexed = true)]

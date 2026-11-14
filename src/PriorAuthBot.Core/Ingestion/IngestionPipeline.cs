@@ -128,6 +128,8 @@ public sealed partial class IngestionPipeline(
                     Section = chunk.Section,
                     Text = chunk.Text,
                     SourcePath = Path.GetFileName(document.SourcePath),
+                    Page = PageOf(document, chunk),
+                    SearchText = (document.PolicyNumber is null ? string.Empty : document.PolicyNumber + " ") + EmbeddingInput(document, chunk),
                     AllowedGroups = [.. document.Access.AllowedGroups],
                     Sensitivity = document.Access.Sensitivity,
                     Department = document.Department,
@@ -148,6 +150,30 @@ public sealed partial class IngestionPipeline(
         chunk.Section.Length == 0
             ? $"{document.Title}\n\n{chunk.Text}"
             : $"{document.Title} > {chunk.Section}\n\n{chunk.Text}";
+
+    /// <summary>
+    /// The page a chunk starts on: the first page whose text contains the chunk's opening words.
+    /// Whitespace is collapsed on both sides, because chunking normalizes it. Null when the document
+    /// has no pages, or the opening words cannot be found (citations then name the section only).
+    /// </summary>
+    internal static int? PageOf(SourceDocument document, TextChunk chunk)
+    {
+        if (document.Pages is not { Count: > 0 } pages)
+        {
+            return null;
+        }
+
+        var opening = Collapse(chunk.Text);
+        opening = opening[..Math.Min(opening.Length, 60)];
+        if (opening.Length == 0)
+        {
+            return null;
+        }
+
+        return pages.FirstOrDefault(p => Collapse(p.Text).Contains(opening, StringComparison.Ordinal))?.Number;
+
+        static string Collapse(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
 
     private static string Hash(SourceDocument document)
     {

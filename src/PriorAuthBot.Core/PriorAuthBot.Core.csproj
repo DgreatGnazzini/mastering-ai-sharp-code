@@ -8,6 +8,7 @@
     <PackageReference Include="CommunityToolkit.VectorData.Qdrant" />
     <PackageReference Include="CommunityToolkit.VectorData.AzureAISearch" />
     <PackageReference Include="Microsoft.ML.Tokenizers" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />

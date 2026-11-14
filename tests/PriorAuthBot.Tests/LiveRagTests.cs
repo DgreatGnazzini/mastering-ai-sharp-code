@@ -15,7 +15,8 @@ namespace PriorAuthBot.Tests;
 
 /// <summary>
 /// The golden set against a real local model: nomic-embed-text for retrieval, llama3.2:3b for
-/// answers, and one Microsoft.Extensions.AI.Evaluation groundedness check. Runs when
+/// answers, one Microsoft.Extensions.AI.Evaluation groundedness check, and, from chapter 8,
+/// citation faithfulness: is each cited sentence supported by the source it cites? Runs when
 /// PRIORAUTHBOT_TEST_OLLAMA is set, as it is in the CI "RAG eval" job.
 /// </summary>
 public sealed class LiveRagTests(ITestOutputHelper output)
@@ -24,6 +25,12 @@ public sealed class LiveRagTests(ITestOutputHelper output)
 
     /// <summary>Groundedness is scored 1 (unsupported) to 5 (fully supported by the sources).</summary>
     private const double MinAverageGroundedness = 3.5;
+
+    /// <summary>
+    /// The share of cited sentences their cited source supports, averaged over the answers (chapter 8).
+    /// Set from the first CI run, like the groundedness threshold, and raised only on evidence.
+    /// </summary>
+    private const double MinAverageCitationFaithfulness = 0.6;
 
     [Fact]
     public async Task GoldenSetWithOllama()
@@ -40,12 +47,15 @@ public sealed class LiveRagTests(ITestOutputHelper output)
             new HttpClient { BaseAddress = new Uri(LiveSettings.Ollama!), Timeout = TimeSpan.FromMinutes(10) }, LiveSettings.JudgeModel);
         var judge = new ChatConfiguration(judgeClient);
         var evaluator = new GroundednessEvaluator();
+        var citationEvaluator = new Evaluation.CitationFaithfulnessEvaluator();
+        var faithfulness = new List<double>();
+        var coverage = new List<double>();
 
         var failures = new List<string>();
         var groundedness = new List<double>();
         var containsExpected = 0;
         var answerable = 0;
-        var report = new StringBuilder("| Case | User | Top score | Declined | Contains expected | Groundedness |\n|---|---|---|---|---|---|\n");
+        var report = new StringBuilder("| Case | User | Top cosine | Declined | Contains expected | Groundedness | Cited | Citation faithfulness |\n|---|---|---|---|---|---|---|---|\n");
 
         foreach (var goldenCase in Set.Cases)
         {
@@ -70,6 +80,7 @@ public sealed class LiveRagTests(ITestOutputHelper output)
             }
 
             string? score = null;
+            string? faithful = null;
             var mustContain = goldenCase.AnswerMustContain ?? [];
             var contains = mustContain.Length > 0 && mustContain.All(p => answer.Answer.Contains(p, StringComparison.OrdinalIgnoreCase));
             if (!goldenCase.ExpectDecline && mustContain.Length > 0)
@@ -100,21 +111,48 @@ public sealed class LiveRagTests(ITestOutputHelper output)
                     {
                         output.WriteLine($"{goldenCase.Id}: judge gave no score. {string.Join(" | ", metric.Diagnostics?.Select(d => d.Message) ?? [])}");
                     }
+
+                    // Chapter 8: is each cited sentence supported by the source it cites?
+                    var citations = await citationEvaluator.EvaluateAsync(
+                        messages,
+                        new ChatResponse(new ChatMessage(ChatRole.Assistant, answer.Answer)),
+                        judge,
+                        [new Evaluation.CitationSourcesContext(context.Sources.Select(c => c.Record.Text).ToList())],
+                        ct);
+                    var faithfulMetric = citations.Get<NumericMetric>(Evaluation.CitationFaithfulnessEvaluator.FaithfulnessMetricName);
+                    if (faithfulMetric.Value is { } f)
+                    {
+                        faithfulness.Add(f);
+                        faithful = f.ToString("0.00", CultureInfo.InvariantCulture);
+                    }
+                    else
+                    {
+                        output.WriteLine($"{goldenCase.Id}: no citation score. {string.Join(" | ", faithfulMetric.Diagnostics?.Select(d => d.Message) ?? [])}");
+                    }
+
+                    if (citations.Get<NumericMetric>(Evaluation.CitationFaithfulnessEvaluator.CoverageMetricName).Value is { } c)
+                    {
+                        coverage.Add(c);
+                    }
                 }
             }
 
-            var top = retrieved.Count > 0 ? retrieved[0].Score.ToString("0.000", CultureInfo.InvariantCulture) : "-";
-            report.Append(CultureInfo.InvariantCulture, $"| {goldenCase.Id} | {goldenCase.User} | {top} | {answer.Declined} | {(mustContain.Length == 0 ? "-" : contains.ToString())} | {score ?? "-"} |\n");
+            var top = retrieved.Max(r => r.VectorScore) is { } best ? best.ToString("0.000", CultureInfo.InvariantCulture) : "-";
+            var cited = answer.Declined ? "-" : string.Join(", ", answer.Citations.Select(c => c.Number));
+            report.Append(CultureInfo.InvariantCulture, $"| {goldenCase.Id} | {goldenCase.User} | {top} | {answer.Declined} | {(mustContain.Length == 0 ? "-" : contains.ToString())} | {score ?? "-"} | {(cited.Length == 0 ? "none" : cited)} | {faithful ?? "-"} |\n");
             output.WriteLine($"{goldenCase.Id} ({goldenCase.User}): {answer.Answer}");
         }
 
         var average = groundedness.Count > 0 ? groundedness.Average() : 0;
+        var averageFaithfulness = faithfulness.Count > 0 ? faithfulness.Average() : 0;
         report.Append(CultureInfo.InvariantCulture, $"\nJudge: {LiveSettings.JudgeModel}. Average groundedness: {average:0.00} over {groundedness.Count} answers. Answers containing the expected fact: {containsExpected}/{answerable}.\n");
+        report.Append(CultureInfo.InvariantCulture, $"Citation faithfulness: {averageFaithfulness:0.00} average over {faithfulness.Count} answers. Citation coverage (sentences that cite a source): {(coverage.Count > 0 ? coverage.Average() : 0):0.00}.\n");
         await File.WriteAllTextAsync(Path.Combine(LiveSettings.ReportDirectory, "golden-set-ollama.md"), report.ToString(), ct);
         output.WriteLine(report.ToString());
 
         Assert.True(groundedness.Count >= answerable * 3 / 4, $"Only {groundedness.Count} of {answerable} answers could be scored.");
         Assert.True(average >= MinAverageGroundedness, $"Average groundedness {average:0.00} is below {MinAverageGroundedness}.");
+        Assert.True(averageFaithfulness >= MinAverageCitationFaithfulness, $"Average citation faithfulness {averageFaithfulness:0.00} is below {MinAverageCitationFaithfulness}.");
         Assert.True(failures.Count == 0, string.Join('\n', failures));
     }
 

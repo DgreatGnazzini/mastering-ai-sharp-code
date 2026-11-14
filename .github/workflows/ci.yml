@@ -144,10 +144,12 @@ jobs:
     # Chapter 7: the golden set against a real local model (Ollama), plus one groundedness check
     # with Microsoft.Extensions.AI.Evaluation. Chapter 2: streaming latency. Chapter 3: the labeled
     # classification questions.
+    # Chapter 8: hybrid search, reranking (a local cross-encoder and the LLM), query rewriting, and
+    # citation faithfulness.
     # CPU only, so it takes several minutes.
     name: RAG eval (golden set on Ollama)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -158,12 +160,16 @@ jobs:
       # llama3.2:3b could not follow the groundedness evaluator's output format (2 of 13 scored).
       PRIORAUTHBOT_TEST_JUDGE_MODEL: qwen2.5:7b
       PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
+      PRIORAUTHBOT_TEST_RERANKER: ${{ github.workspace }}/models/ms-marco-MiniLM-L6-v2
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+
+      - name: Download the cross-encoder reranker (chapter 8)
+        run: scripts/get-reranker.sh "$PRIORAUTHBOT_TEST_RERANKER"
 
       # Installed on the runner rather than as a service container: in a container on the hosted
       # runner, Ollama ran inference on a single thread and every answer took minutes.
@@ -211,6 +217,12 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveSemanticSearchTests" --output Detailed
+
+      - name: Hybrid search, reranking, and query rewriting (chapter 8)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveHybridSearchTests" --output Detailed
 
       - name: Read scans with a vision model (chapter 4)
         if: always()

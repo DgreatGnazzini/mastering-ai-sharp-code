@@ -1,5 +1,5 @@
 {
-  "description": "Chapter 7 golden set: 20 questions over samples/documents. expectedDocuments must reach the context; mustNotSee documents must never be retrieved for that user; expectDecline means PriorAuthBot must say it does not know. Chapter 9 grows this to about 100 questions.",
+  "description": "Golden set over samples/documents: 20 questions from chapter 7, plus 4 exact-term questions from chapter 8 (billing codes and policy numbers). expectedDocuments must reach the context; mustNotSee documents must never be retrieved for that user; expectDecline means PriorAuthBot must say it does not know. Chapter 9 grows this to about 100 questions.",
   "offline": {
     "minScore": 0.25
   },
@@ -238,6 +238,45 @@
         "draft-layoff-plan"
       ],
       "expectDecline": true
+    },
+    {
+      "id": "gs21-cpt-code-claims",
+      "user": "claims",
+      "question": "Does CPT 72148 need prior authorization?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "six weeks"
+      ]
+    },
+    {
+      "id": "gs22-cpt-code-contractor",
+      "user": "contractor",
+      "question": "Does CPT 72148 need prior authorization?",
+      "mustNotSee": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs23-policy-number-hr",
+      "user": "hr",
+      "question": "What does HR-104 say about carryover?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "40 hours"
+      ]
+    },
+    {
+      "id": "gs24-policy-number-claims",
+      "user": "claims",
+      "question": "What is CLM-620 about?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ]
     }
   ]
 }
