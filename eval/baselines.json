@@ -12,6 +12,20 @@
         "mrr": 0.95,
         "declinesKept": 0.96
       }
+    },
+    "Ollama": {
+      "retrieval": {
+        "recallAtTop": 0.97,
+        "mrr": 0.97,
+        "declinesKept": 0.83
+      },
+      "answers": {
+        "Relevance": 3.89,
+        "Groundedness": 4.55,
+        "Completeness": 3.68,
+        "Citation faithfulness": 0.78,
+        "Contains expected fact": 0.79
+      }
     }
   }
 }
