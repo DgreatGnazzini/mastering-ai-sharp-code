@@ -16,6 +16,8 @@
     <ProjectReference Include="..\..\src\PriorAuthBot.Core\PriorAuthBot.Core.csproj" />
     <ProjectReference Include="..\..\src\PriorAuthBot.Api\PriorAuthBot.Api.csproj" />
     <ProjectReference Include="..\..\eval\PriorAuthBot.Eval\PriorAuthBot.Eval.csproj" />
+    <ProjectReference Include="..\..\samples\mcp\DeductibleDynamics.Formulary\DeductibleDynamics.Formulary.csproj" />
+    <ProjectReference Include="..\..\samples\mock-apis\DeductibleDynamics.MockHr\DeductibleDynamics.MockHr.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GoldenSet\*.json" CopyToOutputDirectory="PreserveNewest" />

@@ -45,6 +45,35 @@ public sealed class EvalSuiteTests
     }
 
     /// <summary>
+    /// Chapter 10's tool cases offline: the offline client's keyword rules pick the tools, so this
+    /// checks the plumbing and the absolute rules (no write without approval, no leak) on every push.
+    /// </summary>
+    [Fact]
+    public async Task TheToolCasesPassTheOfflineGate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var owned = new List<IAsyncDisposable>();
+        ToolSummary summary;
+        await using (var host = EvalHost.Create(Offline.Configuration(Set), configure: s => ToolEvaluation.Configure(s, owned)))
+        {
+            await host.IngestSamplesAsync(ct);
+            var results = await ToolEvaluation.RunAsync(host, Set, ToolCaseSet.Load(), cancellationToken: ct);
+            summary = ToolSummary.Of(results, ((Core.Tools.InMemoryHelpDesk)host.Get<Core.Tools.IHelpDesk>()).Count);
+            Assert.All(results, r => Assert.Null(r.Error));
+        }
+
+        foreach (var server in owned)
+        {
+            await server.DisposeAsync();
+        }
+
+        var run = await RunAsync(RetrievalConfiguration.Comparison(null).Single(c => c.Name == RetrievalConfiguration.Chapter8), ct);
+        var gate = RegressionGate.Check(Baselines.Load(EvalPaths.Baselines), EvalSettings.Offline, run.Summary(), run.Leaks, answers: null, summary);
+        Assert.True(gate.Ok, string.Join('\n', gate.Failed));
+        Assert.Equal(0, summary.UnapprovedWrites);
+    }
+
+    /// <summary>
     /// The worst model there is: it repeats its whole prompt back as the answer. If PriorAuthBot
     /// never puts restricted text in a prompt, even this model cannot leak, which is why a model or
     /// prompt change cannot break access control. That property is what this test pins down.

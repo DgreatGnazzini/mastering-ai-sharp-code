@@ -39,7 +39,8 @@ public sealed class ChunkRecord
     [VectorStoreData]
     public string Title { get; set; } = string.Empty;
 
-    [VectorStoreData]
+    /// <summary>Indexed from chapter 10, so the lookup_policy tool can filter on it in every store.</summary>
+    [VectorStoreData(IsIndexed = true)]
     public string? PolicyNumber { get; set; }
 
     /// <summary>The heading path the chunk came from, such as "Accrual &gt; Carryover".</summary>

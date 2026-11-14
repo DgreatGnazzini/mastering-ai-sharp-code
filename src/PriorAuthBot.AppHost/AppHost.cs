@@ -24,12 +24,17 @@ var embeddingModel = ollama.AddModel("embedding", "nomic-embed-text:v1.5");
 // for it, so the rest of PriorAuthBot starts while it downloads.
 ollama.AddModel("vision", "qwen2.5vl:3b");
 
+// Chapter 10: the mock HR system, which the PTO balance tool calls on behalf of the user.
+var hr = builder.AddProject<Projects.DeductibleDynamics_MockHr>("hr");
+
 builder.AddProject<Projects.PriorAuthBot_Api>("api")
     .WithReference(database)
     .WaitFor(database)
     .WaitFor(chatModel)
     .WaitFor(embeddingModel)
     .WithEnvironment("AI__Provider", "Ollama")
-    .WithEnvironment("AI__Ollama__Endpoint", ollama.GetEndpoint("http"));
+    .WithEnvironment("AI__Ollama__Endpoint", ollama.GetEndpoint("http"))
+    .WithEnvironment("Tools__Hr__BaseAddress", hr.GetEndpoint("http"))
+    .WaitFor(hr);
 
 builder.Build().Run();

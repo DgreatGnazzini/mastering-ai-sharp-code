@@ -19,6 +19,9 @@ public static class AiServiceCollectionExtensions
     /// <summary>The keyed chat client for images: OCR and form extraction (chapter 4).</summary>
     public const string VisionKey = "vision";
 
+    /// <summary>The keyed chat client that can call tools (chapter 10): the main model, with function invocation.</summary>
+    public const string ToolsKey = "tools";
+
     private enum Purpose
     {
         Chat,
@@ -67,6 +70,12 @@ public static class AiServiceCollectionExtensions
         services.AddKeyedChatClient(VisionKey, sp => CreateChatClient(sp, Purpose.Vision))
             .UsePriorAuthBotPipeline();
 
+        // Chapter 10: the same model, with FunctionInvokingChatClient outermost, so every round trip
+        // of the tool loop passes through the PHI guard, logging, cache, and retries below it.
+        services.AddKeyedChatClient(ToolsKey, sp => CreateChatClient(sp, Purpose.Chat))
+            .UsePriorAuthBotToolInvocation()
+            .UsePriorAuthBotPipeline();
+
         return services;
     }
 
@@ -90,6 +99,23 @@ public static class AiServiceCollectionExtensions
                 inner,
                 sp.GetRequiredService<IOptions<AiOptions>>().Value.Resilience,
                 sp.GetService<ILoggerFactory>()?.CreateLogger<RetryingChatClient>()));
+    }
+
+    /// <summary>
+    /// Function invocation with PriorAuthBot's limits (chapter 10). The loop stops after a few round
+    /// trips, so a model that keeps calling tools cannot run up cost; one call runs at a time; and an
+    /// exception's message never goes back to the model, which would put internal details in its context.
+    /// </summary>
+    public static ChatClientBuilder UsePriorAuthBotToolInvocation(this ChatClientBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder.UseFunctionInvocation(configure: client =>
+        {
+            client.MaximumIterationsPerRequest = 4;
+            client.MaximumConsecutiveErrorsPerRequest = 2;
+            client.AllowConcurrentInvocation = false;
+            client.IncludeDetailedErrors = false;
+        });
     }
 
     /// <summary>

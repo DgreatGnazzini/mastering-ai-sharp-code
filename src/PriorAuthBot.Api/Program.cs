@@ -5,6 +5,13 @@ using Microsoft.Extensions.AI;
 using PriorAuthBot.Api;
 using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Api.Ingestion;
+using PriorAuthBot.Api.Mcp;
+using PriorAuthBot.Api.Tools;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using ModelContextProtocol.AspNetCore.Authentication;
+using PriorAuthBot.Core.Mcp;
+using PriorAuthBot.Core.Tools;
 using PriorAuthBot.Core;
 using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Classification;
@@ -48,19 +55,61 @@ if (authMode == DemoAuthenticationHandler.SchemeName)
 
     builder.Services.AddAuthentication(DemoAuthenticationHandler.SchemeName)
         .AddScheme<AuthenticationSchemeOptions, DemoAuthenticationHandler>(DemoAuthenticationHandler.SchemeName, null);
+
+    // Chapter 10: demo personas have no Entra token to exchange, so a development-only provider
+    // signs the HR API's tokens instead of the on-behalf-of flow.
+    builder.Services.AddOptions<DevelopmentTokenOptions>().Bind(builder.Configuration.GetSection(DevelopmentTokenOptions.SectionName));
+    builder.Services.Replace(ServiceDescriptor.Singleton<IDownstreamTokenProvider, DevelopmentTokenProvider>());
 }
 else
 {
-    builder.Services.AddAuthentication().AddJwtBearer(options =>
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+
+        // Chapter 10: a 401 also tells MCP clients where to find PriorAuthBot's protected resource
+        // metadata, which names the authorization server and the scope to ask for.
+        options.DefaultChallengeScheme = McpAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
     {
         builder.Configuration.Bind("Auth:JwtBearer", options);
 
         // Keep Entra's claim names ("oid", "groups") instead of mapping them to long URIs.
         options.MapInboundClaims = false;
+    })
+    .AddMcp(options =>
+    {
+        var authority = builder.Configuration["Auth:JwtBearer:Authority"];
+        options.ResourceMetadata = new()
+        {
+            Resource = builder.Configuration["Mcp:Server:Resource"],
+            ResourceName = "PriorAuthBot policy search",
+            AuthorizationServers = authority is null ? [] : [authority],
+            ScopesSupported = builder.Configuration.GetSection("Mcp:Server:Scopes").Get<string[]>() ?? [],
+        };
     });
 }
 
 builder.Services.AddAuthorization();
+
+// Chapter 10: tools for the signed-in user, and the MCP servers PriorAuthBot may start. A stdio
+// server's relative paths are resolved from the API's content root.
+builder.Services.AddSingleton<ToolCallerFactory>();
+builder.Services.PostConfigure<McpOptions>(options =>
+{
+    foreach (var server in options.Servers.Values)
+    {
+        server.WorkingDirectory ??= builder.Environment.ContentRootPath;
+    }
+});
+
+// Chapter 10: PriorAuthBot's own search, published as an MCP server at /mcp. Stateless, so every
+// request is authenticated on its own and no session can outlive or change its user.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMcpServer(options => options.ServerInfo = new() { Name = "priorauthbot", Version = PriorAuthBotInfo.Current.Chapter })
+    .WithHttpTransport(options => options.Stateless = true)
+    .WithTools<PolicySearchMcpTools>();
 
 // Chapter 2: a per-user rate limit, so one person (or one runaway script) cannot spend the whole model quota.
 builder.Services.AddOptions<UserRateLimitOptions>().Bind(builder.Configuration.GetSection(UserRateLimitOptions.SectionName));
@@ -169,6 +218,12 @@ api.MapPost("/ask", async (AskRequest request, ClaimsPrincipal user, CallerIdent
     var caller = identities.Create(user);
     return await rag.AskAsync(request.Question, caller, cancellationToken);
 });
+
+// Chapter 10: the model with tools, and approval for every write.
+api.MapAssistant();
+
+// Chapter 10: the MCP endpoint, behind the same sign-in and per-user rate limit as everything else.
+app.MapMcp("/mcp").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);
 
 await app.RunAsync();
 

@@ -117,6 +117,55 @@ internal static class Reports
         return s.ToString();
     }
 
+    public static string Tools(string provider, IReadOnlyList<ToolCaseResult> results, ToolSummary summary)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+        ArgumentNullException.ThrowIfNull(summary);
+        var s = new StringBuilder();
+        s.Append(CultureInfo.InvariantCulture, $"### Tool calls, {provider}: {summary.Cases} tool cases\n\n");
+        s.Append("| Metric | Result |\n|---|---|\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Right first tool (or none) | {summary.SelectionCorrect} of {summary.Scored} ({summary.Selection:0.00}) |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Right arguments | {summary.ArgumentsCorrect} of {summary.WithArguments} ({summary.Arguments:0.00}) |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Writes held for approval | {summary.WritesHeld} of {summary.ExpectedWrites} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Writes without approval | {summary.UnapprovedWrites} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Leaks in answers | {summary.Leaks} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Errors | {summary.Errors} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Time per case | {(results.Count == 0 ? 0 : results.Average(r => r.Elapsed.TotalSeconds)):0.0} s |\n\n");
+
+        s.Append("| Case | User | Kind | Expected | Calls | Approval | Notes |\n|---|---|---|---|---|---|---|\n");
+        foreach (var r in results)
+        {
+            var calls = r.Reply is null ? "error" : r.Reply.ToolCalls.Count == 0 ? "none" : string.Join(", ", r.Reply.ToolCalls.Select(c => $"{c.Name} {c.Arguments} ({c.Status})"));
+            var notes = new List<string>();
+            if (r.Case.ScoresSelection && !r.SelectionOk)
+            {
+                notes.Add("wrong tool");
+            }
+
+            if (r.ArgumentsOk == false)
+            {
+                notes.Add("wrong arguments");
+            }
+
+            notes.AddRange(r.Missing.Select(m => $"missing \"{m}\""));
+            notes.AddRange(r.Leaks.Select(_ => "LEAK"));
+            if (r.Error is not null)
+            {
+                notes.Add(r.Error);
+            }
+
+            s.Append(CultureInfo.InvariantCulture,
+                $"| {r.Case.Id} | {r.Case.User} | {r.Case.Kind} | {r.Case.ExpectTool ?? "-"} | {calls.Replace("|", "\\|", StringComparison.Ordinal)} | {(r.Reply?.PendingActions.Count > 0 ? "requested" : "-")} | {string.Join("; ", notes)} |\n");
+        }
+
+        foreach (var leak in results.SelectMany(r => r.Leaks))
+        {
+            s.Append("\n- LEAK ").Append(leak);
+        }
+
+        return s.ToString();
+    }
+
     public static string Gate(string provider, GateResult gate, ProviderBaseline proposed)
     {
         ArgumentNullException.ThrowIfNull(gate);

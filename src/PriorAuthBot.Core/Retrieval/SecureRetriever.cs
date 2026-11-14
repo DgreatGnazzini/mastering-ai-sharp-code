@@ -84,6 +84,32 @@ public sealed partial class SecureRetriever(
             chunks.Select(c => new DocumentViewSection(Rag.Citations.Link(c).Split('#').ElementAtOrDefault(1) ?? string.Empty, c.Section, c.Page, c.Text)).ToList());
     }
 
+    /// <summary>
+    /// The document with this policy number, as the caller may see it, or null (chapter 10's
+    /// <c>lookup_policy</c> tool). Like <see cref="GetDocumentAsync"/>, null means "not found"
+    /// whether the policy does not exist or the caller may not read it.
+    /// </summary>
+    public async Task<DocumentView?> GetDocumentByPolicyNumberAsync(string policyNumber, CallerIdentity caller, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(policyNumber);
+        ArgumentNullException.ThrowIfNull(caller);
+        if (caller.Groups.Count == 0 || !await collection.CollectionExistsAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        // The first chunk of each document carries its policy number. Find it inside the group
+        // filter, then read the document through the same path as a citation link.
+        var groups = caller.Groups.ToList();
+        await foreach (var record in collection.GetAsync(r => r.PolicyNumber == policyNumber && r.ChunkIndex == 0 && r.AllowedGroups.Any(g => groups.Contains(g)), 1, cancellationToken: cancellationToken).ConfigureAwait(false))
+        {
+            Check(record, caller);
+            return await GetDocumentAsync(record.DocumentId, caller, cancellationToken).ConfigureAwait(false);
+        }
+
+        return null;
+    }
+
     private async Task<List<RetrievedChunk>> HybridSearchAsync(string query, CallerIdentity caller, RetrievalOptions settings, CancellationToken cancellationToken)
     {
         IReadOnlyList<string> queries = [query];

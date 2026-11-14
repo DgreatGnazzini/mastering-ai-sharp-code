@@ -4,13 +4,23 @@ namespace PriorAuthBot.Core.AI;
 
 /// <summary>
 /// The chat client used when <c>AI:Provider</c> is <c>Offline</c>. It never calls a model: it
-/// echoes the first source it was given, so the API runs end to end in tests and CI.
+/// echoes the first source it was given, so the API runs end to end in tests and CI. When it is
+/// offered tools (chapter 10), it picks one with a few keyword rules, so the tool loop, approvals,
+/// and the tool eval also run with no model. The rules are a test double, not a router to copy.
 /// </summary>
-public sealed class OfflineChatClient : IChatClient
+public sealed partial class OfflineChatClient : IChatClient
 {
+    private static readonly System.Text.Json.JsonSerializerOptions Compact = new(AIJsonUtilities.DefaultOptions) { WriteIndented = false };
+
     public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
-        var context = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
+        var list = messages as IList<ChatMessage> ?? messages.ToList();
+        if (options?.Tools is { Count: > 0 } tools)
+        {
+            return Task.FromResult(WithTools(list, tools));
+        }
+
+        var context = list.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
         var start = context.IndexOf("[1]", StringComparison.Ordinal);
         var text = start < 0
             ? "Offline mode has no model to answer with."
@@ -26,6 +36,68 @@ public sealed class OfflineChatClient : IChatClient
             yield return update;
         }
     }
+
+    private static ChatResponse WithTools(IList<ChatMessage> messages, IList<AITool> tools)
+    {
+        // After a tool ran: report its result.
+        if (messages.Count > 0 && messages[^1].Contents.OfType<FunctionResultContent>().FirstOrDefault() is { } result)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(result.Result, Compact);
+            return new ChatResponse(new ChatMessage(ChatRole.Assistant, $"Offline mode (no model). The tool returned: {(json.Length > 600 ? json[..600] + "..." : json)}"));
+        }
+
+        var question = messages.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
+        var names = tools.Select(t => t.Name).ToList();
+        var call = PickTool(question, names);
+        return call is null
+            ? new ChatResponse(new ChatMessage(ChatRole.Assistant, "Offline mode (no model). I can look up a policy by number, check your PTO balance, or open a help desk ticket."))
+            : new ChatResponse(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent($"offline-{Guid.NewGuid():N}", call.Value.Name, call.Value.Arguments)]));
+    }
+
+    /// <summary>The offline client's tool choice for a question, or null for "no tool".</summary>
+    public static (string Name, Dictionary<string, object?> Arguments)? PickTool(string question, IReadOnlyCollection<string> tools)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        ArgumentNullException.ThrowIfNull(tools);
+        var q = question.ToLowerInvariant();
+        bool Has(params string[] words) => words.Any(w => q.Contains(w, StringComparison.Ordinal));
+
+        if ((Has("tiers") || (Has("each") && Has("tier"))) && tools.FirstOrDefault(t => t.EndsWith("_list_tiers", StringComparison.Ordinal)) is { } tiers)
+        {
+            return (tiers, []);
+        }
+
+        if (Has("formulary", "covered", "tier") && tools.FirstOrDefault(t => t.EndsWith("_search_formulary", StringComparison.Ordinal)) is { } formulary)
+        {
+            return (formulary, new() { ["query"] = question });
+        }
+
+        if (PolicyNumber().Match(question) is { Success: true } match && tools.Contains("lookup_policy"))
+        {
+            return ("lookup_policy", new() { ["policyNumber"] = match.Value.ToUpperInvariant() });
+        }
+
+        if (Has("pto", "vacation", "time off") && Has("balance", "left", "how much", "how many", "do i have") && tools.Contains("get_pto_balance"))
+        {
+            return ("get_pto_balance", []);
+        }
+
+        if (Has("ticket", "help desk", "broken", "not working", "won't", "locked out", "reset") && tools.Contains("open_help_desk_ticket"))
+        {
+            var category = Has("laptop", "monitor", "screen", "keyboard", "mouse", "printer", "headset") ? "Hardware"
+                : Has("password", "locked out", "access", "permission") ? "Access"
+                : Has("vpn", "wifi", "wi-fi", "network", "internet") ? "Network"
+                : Has("install", "outlook", "excel", "teams", "software", "app") ? "Software"
+                : "Other";
+            var urgency = Has("urgent", "asap", "can't work", "cannot work") ? "High" : "Normal";
+            return ("open_help_desk_ticket", new() { ["summary"] = question.Length <= 300 ? question : question[..300], ["category"] = category, ["urgency"] = urgency });
+        }
+
+        return null;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b[A-Za-z]{2,4}-\d{3}\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex PolicyNumber();
 
     public object? GetService(Type serviceType, object? serviceKey = null) =>
         serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;

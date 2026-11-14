@@ -29,7 +29,7 @@ internal sealed class EvalHost : IAsyncDisposable
     /// <summary>Every request sent to the main chat client since the last <see cref="PromptRecorder.Clear"/>.</summary>
     public PromptRecorder Prompts { get; }
 
-    public static EvalHost Create(IDictionary<string, string?> settings, IDistributedCache? cache = null, IChatClient? chatClient = null)
+    public static EvalHost Create(IDictionary<string, string?> settings, IDistributedCache? cache = null, IChatClient? chatClient = null, Action<IServiceCollection>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
@@ -46,6 +46,7 @@ internal sealed class EvalHost : IAsyncDisposable
             services.AddSingleton(chatClient);
         }
 
+        configure?.Invoke(services);
         var recorder = new PromptRecorder();
         DecorateChatClient(services, recorder);
         return new EvalHost(services.BuildServiceProvider(), recorder);

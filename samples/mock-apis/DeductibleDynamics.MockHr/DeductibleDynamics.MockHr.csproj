@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!--
+    Chapter 10: a stand-in for Deductible Dynamics' HR system, so the PTO balance tool has a real
+    API to call on behalf of the user. It has one endpoint, GET /me/pto-balance, and it reads the
+    employee from the token, never from the request.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="employees.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
