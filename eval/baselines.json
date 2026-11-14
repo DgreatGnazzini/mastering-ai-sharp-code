@@ -2,8 +2,8 @@
   "description": "Accepted numbers for PriorAuthBot's shipped configuration (hybrid retrieval), per provider. The eval fails a run that falls more than the tolerance below these. Changes need a CODEOWNERS review. Leaks are not here: any leak fails the run.",
   "tolerance": {
     "retrieval": 0.02,
-    "judgeScore": 0.25,
-    "share": 0.05
+    "judgeScore": 0.5,
+    "share": 0.1
   },
   "providers": {
     "Offline": {

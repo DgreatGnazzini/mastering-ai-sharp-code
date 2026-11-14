@@ -29,9 +29,11 @@ internal sealed record Baselines(
 
 /// <summary>
 /// How far a metric may fall below its baseline before the gate fails. Judges are noisy, so their
-/// 1 to 5 scores get more room than retrieval, which is deterministic for a given model.
+/// 1 to 5 scores get more room than retrieval, which is deterministic for a given model. The judge
+/// tolerances are about twice the spread measured between two uncached CI runs of the same code on the
+/// 20-answer sample (completeness moved 0.26, relevance and groundedness about 0.2, shares 0.05).
 /// </summary>
-internal sealed record Tolerances(double Retrieval = 0.02, double JudgeScore = 0.25, double Share = 0.05);
+internal sealed record Tolerances(double Retrieval = 0.02, double JudgeScore = 0.5, double Share = 0.1);
 
 internal sealed record ProviderBaseline(RetrievalBaseline? Retrieval, Dictionary<string, double>? Answers);
 
