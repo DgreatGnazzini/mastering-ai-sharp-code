@@ -12,6 +12,7 @@ namespace PriorAuthBot.Eval;
 ///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Offline --answers  plus every answer, from the offline client
 ///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Ollama --answers   plus LLM judges on the judged sample
 ///   add --tools to any of them for chapter 10's tool cases (tool choice, arguments, approvals)
+///   add --agents for chapter 11's agent cases (the exception workflow and policy agent conversations)
 /// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
 /// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
 /// </summary>
@@ -117,6 +118,32 @@ internal static class EvalProgram
             }
         }
 
+        // 2c. Agents (chapter 11): where each exception request stops, the hours and approver in its
+        // draft, the tool each conversation turn starts with, and that every run stays in its limits.
+        AgentSummary? agentSummary = null;
+        if (settings.Agents)
+        {
+            var owned = new List<IAsyncDisposable>();
+            await using (var host = EvalHost.Create(settings.Configuration(set), cache, configure: s =>
+            {
+                ToolEvaluation.Configure(s, owned);
+                AgentEvaluation.Configure(s, slowModel: settings.Provider == EvalSettings.Ollama);
+            }))
+            {
+                await host.IngestSamplesAsync();
+                var agentResults = await AgentEvaluation.RunAsync(host, set, AgentCaseSet.Load(), Console.WriteLine);
+                agentSummary = AgentSummary.Of(agentResults, host.Get<Core.Agents.Exceptions.IExceptionRegister>().All.Count);
+                var agentReport = Reports.Agents(settings.Provider, agentResults, agentSummary);
+                await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-agents-{settings.Provider.ToLowerInvariant()}.md"), agentReport);
+                Console.WriteLine(agentReport);
+            }
+
+            foreach (var server in owned)
+            {
+                await server.DisposeAsync();
+            }
+        }
+
         if (cache is not null)
         {
             Console.WriteLine($"Answer and embedding cache: {cache.Hits} hits, {cache.Misses} misses.");
@@ -129,8 +156,8 @@ internal static class EvalProgram
         }
 
         var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
-        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary);
-        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary));
+        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary);
+        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary, agentSummary));
         await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
         Console.WriteLine(gateReport);
         return gate.Ok ? 0 : 1;

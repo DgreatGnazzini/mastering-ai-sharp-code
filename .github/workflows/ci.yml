@@ -47,11 +47,11 @@ jobs:
 
       - name: Eval gate, offline (chapter 9)
         # Retrieval on all 105 golden questions, chapter 7 against chapter 8, the leak checks on
-        # every retrieval, prompt, and answer, chapter 10's tool cases, and the gate against eval/baselines.json.
+        # every retrieval, prompt, and answer, chapter 10's tool cases, chapter 11's agent cases, and the gate against eval/baselines.json.
         if: matrix.os == 'ubuntu-latest'
         run: >-
           dotnet run --project eval/PriorAuthBot.Eval --configuration Release --no-build
-          -- --provider Offline --answers --tools --out eval-reports
+          -- --provider Offline --answers --tools --agents --out eval-reports
 
       - name: Add the eval reports to the job summary
         if: always() && matrix.os == 'ubuntu-latest'
@@ -209,10 +209,10 @@ jobs:
           key: eval-cache-${{ github.run_id }}
           restore-keys: eval-cache-
 
-      - name: Eval suite with LLM judges, tool cases, and the regression gate (chapters 9 and 10)
+      - name: Eval suite with LLM judges, tool and agent cases, and the regression gate (chapters 9 to 11)
         run: >-
           dotnet run --project eval/PriorAuthBot.Eval --configuration Release
-          -- --provider Ollama --answers --tools --execution ${{ github.sha }}
+          -- --provider Ollama --answers --tools --agents --execution ${{ github.sha }}
 
       - name: Save the eval cache
         if: always()

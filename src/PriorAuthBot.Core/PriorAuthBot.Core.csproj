@@ -18,6 +18,8 @@
     <PackageReference Include="Azure.AI.DocumentIntelligence" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Prompts\Templates\*.md;Prompts\Templates\*.json" LogicalName="PriorAuthBot.Core.Prompts.Templates.%(Filename)%(Extension)" />
