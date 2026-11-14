@@ -30,6 +30,17 @@ public sealed class VectorStoreRegistrationTests
         Assert.Equal(expectedName, collection.Name);
     }
 
+    [Theory]
+    [InlineData("Host=localhost;Database=priorauthbot", "-c hnsw.iterative_scan=relaxed_order")]
+    [InlineData("Host=localhost;Options=-c statement_timeout=5000", "-c statement_timeout=5000 -c hnsw.iterative_scan=relaxed_order")]
+    [InlineData("Host=localhost;Options=-c hnsw.iterative_scan=strict_order", "-c hnsw.iterative_scan=strict_order")]
+    public void PgvectorConnectionsScanUntilEnoughRowsPassTheFilter(string connectionString, string expectedOptions)
+    {
+        var result = new Npgsql.NpgsqlConnectionStringBuilder(VectorStoreServiceCollectionExtensions.WithIterativeScan(connectionString));
+
+        Assert.Equal(expectedOptions, result.Options);
+    }
+
     [Fact]
     public void ChunkKeysAreStableGuids()
     {

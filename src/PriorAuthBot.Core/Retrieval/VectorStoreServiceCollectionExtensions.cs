@@ -7,6 +7,7 @@ using CommunityToolkit.VectorData.Qdrant;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.VectorData;
+using Npgsql;
 using Qdrant.Client;
 
 namespace PriorAuthBot.Core.Retrieval;
@@ -50,6 +51,23 @@ public static class VectorStoreServiceCollectionExtensions
     public const string AzureAISearchIndexName = "policy-chunks";
 
     /// <summary>
+    /// Turns on pgvector 0.8's iterative index scans for every connection. Without them, an HNSW
+    /// search collects <c>hnsw.ef_search</c> candidates (40 by default) and only then applies the
+    /// access filter, so a caller who may see 1% of the chunks gets almost nothing back (section 6.8).
+    /// </summary>
+    public static string WithIterativeScan(string connectionString)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
+        const string setting = "-c hnsw.iterative_scan=relaxed_order";
+        if (builder.Options?.Contains("hnsw.iterative_scan", StringComparison.Ordinal) != true)
+        {
+            builder.Options = string.IsNullOrWhiteSpace(builder.Options) ? setting : $"{builder.Options} {setting}";
+        }
+
+        return builder.ConnectionString;
+    }
+
+    /// <summary>
     /// Registers the vector store named in <c>VectorStore:Provider</c> (chapter 6). Code depends
     /// only on <see cref="VectorStoreCollection{TKey, TRecord}"/>, so the choice is configuration.
     /// What does not port is listed in docs/chapters/ch06.md: key types, collection names, filter
@@ -67,7 +85,7 @@ public static class VectorStoreServiceCollectionExtensions
             case "Postgres":
                 var connectionString = configuration.GetConnectionString("priorauthbot")
                     ?? throw new InvalidOperationException("ConnectionStrings:priorauthbot is required when VectorStore:Provider is Postgres.");
-                services.AddSingleton<VectorStore>(_ => new PostgresVectorStore(connectionString));
+                services.AddSingleton<VectorStore>(_ => new PostgresVectorStore(WithIterativeScan(connectionString)));
                 break;
             case "Qdrant":
                 var qdrant = options.Qdrant;

@@ -4,6 +4,7 @@ using System.Text;
 using CommunityToolkit.VectorData.PgVector;
 using CommunityToolkit.VectorData.Qdrant;
 using Microsoft.Extensions.VectorData;
+using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Tests.Infrastructure;
 using Qdrant.Client;
 using Xunit;
@@ -36,8 +37,9 @@ public sealed class FilteredSearchExperiment(ITestOutputHelper output)
             report.Append(await MeasureAsync("pgvector, default settings", collection));
         }
 
-        // pgvector 0.8 can keep scanning the index until enough rows pass the filter.
-        using (var store = new PostgresVectorStore(LiveSettings.Postgres + ";Options=-c hnsw.iterative_scan=relaxed_order"))
+        // pgvector 0.8 can keep scanning the index until enough rows pass the filter. PriorAuthBot's
+        // registration turns this on for every connection.
+        using (var store = new PostgresVectorStore(VectorStoreServiceCollectionExtensions.WithIterativeScan(LiveSettings.Postgres!)))
         {
             var collection = store.GetCollection<Guid, ExperimentRecord>("filter_experiment");
             report.Append(await MeasureAsync("pgvector, hnsw.iterative_scan = relaxed_order", collection));
