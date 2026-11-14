@@ -51,7 +51,7 @@ public sealed class GoldenSetTests(GoldenSetTests.IndexFixture fixture) : IClass
             Assert.DoesNotContain(chunk.Record.DocumentId, goldenCase.Forbidden);
 
             // The general rule behind every must-not-see case: every chunk shares a group with the caller.
-            Assert.True(caller.IsInAnyGroup(chunk.Record.AllowedGroups), $"{chunk.Record.Key} leaked to {goldenCase.User}.");
+            Assert.True(caller.IsInAnyGroup(chunk.Record.AllowedGroups), $"{chunk.Record.ChunkId} leaked to {goldenCase.User}.");
         }
     }
 

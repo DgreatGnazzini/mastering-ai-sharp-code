@@ -5,6 +5,8 @@
     <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
     <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
     <PackageReference Include="CommunityToolkit.VectorData.PgVector" />
+    <PackageReference Include="CommunityToolkit.VectorData.Qdrant" />
+    <PackageReference Include="CommunityToolkit.VectorData.AzureAISearch" />
     <PackageReference Include="Microsoft.ML.Tokenizers" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="OllamaSharp" />

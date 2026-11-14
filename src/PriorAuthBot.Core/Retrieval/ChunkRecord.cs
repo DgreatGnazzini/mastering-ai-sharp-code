@@ -10,9 +10,17 @@ namespace PriorAuthBot.Core.Retrieval;
 /// </summary>
 public sealed class ChunkRecord
 {
-    /// <summary>Deterministic: <c>{DocumentId}:{ChunkIndex:D4}</c>, so re-ingestion overwrites instead of duplicating.</summary>
+    /// <summary>
+    /// Deterministic, from the document ID and chunk index, so re-ingestion overwrites instead of
+    /// duplicating. A Guid rather than a readable string because it is the one key type every store
+    /// in chapter 6 accepts: Qdrant takes only Guids and integers, Azure AI Search only strings and Guids.
+    /// </summary>
     [VectorStoreKey]
-    public string Key { get; set; } = string.Empty;
+    public Guid Key { get; set; }
+
+    /// <summary>The readable form of the key, <c>{DocumentId}:{ChunkIndex:D4}</c>, for logs and citations.</summary>
+    [VectorStoreData]
+    public string ChunkId { get; set; } = string.Empty;
 
     [VectorStoreData(IsIndexed = true)]
     public string DocumentId { get; set; } = string.Empty;
@@ -61,6 +69,16 @@ public sealed class ChunkRecord
     [VectorStoreVector(ChunkDimensions.Size, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw)]
     public ReadOnlyMemory<float> Embedding { get; set; }
 
-    public static string MakeKey(string documentId, int chunkIndex) =>
+    public static string MakeChunkId(string documentId, int chunkIndex) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{documentId}:{chunkIndex:D4}");
+
+    /// <summary>A name-based Guid: the first 16 bytes of the SHA-256 of the chunk ID, marked as version 8.</summary>
+    public static Guid MakeKey(string documentId, int chunkIndex)
+    {
+        Span<byte> hash = stackalloc byte[32];
+        System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(MakeChunkId(documentId, chunkIndex)), hash);
+        hash[6] = (byte)((hash[6] & 0x0F) | 0x80);
+        hash[8] = (byte)((hash[8] & 0x3F) | 0x80);
+        return new Guid(hash[..16], bigEndian: true);
+    }
 }

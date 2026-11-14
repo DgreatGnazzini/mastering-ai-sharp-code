@@ -85,7 +85,7 @@ Extract a scanned prior authorization form into typed fields, as a claims analys
 curl -X POST http://localhost:5080/intake -H "X-Demo-User: claims" -F "file=@samples/intake/intake-form-001.png;type=image/png"
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch07.md](docs/chapters/ch07.md) for pgvector and OpenAI.
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, and [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI.
 
 ## Configuration and secrets
 

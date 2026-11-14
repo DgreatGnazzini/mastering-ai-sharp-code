@@ -16,7 +16,7 @@ namespace PriorAuthBot.Core.Ingestion;
 public sealed partial class IngestionPipeline(
     IChunker chunker,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
-    VectorStoreCollection<string, ChunkRecord> collection,
+    VectorStoreCollection<Guid, ChunkRecord> collection,
     ILogger<IngestionPipeline> logger)
 {
     private const int EmbeddingBatchSize = 32;
@@ -118,6 +118,7 @@ public sealed partial class IngestionPipeline(
                 records.Add(new ChunkRecord
                 {
                     Key = ChunkRecord.MakeKey(document.Id, chunk.Index),
+                    ChunkId = ChunkRecord.MakeChunkId(document.Id, chunk.Index),
                     DocumentId = document.Id,
                     ChunkIndex = chunk.Index,
                     ChunkCount = chunks.Count,

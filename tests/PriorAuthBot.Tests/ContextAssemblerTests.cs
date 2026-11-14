@@ -32,7 +32,7 @@ public class ContextAssemblerTests
             Chunk("a", 2, "Third chunk.", 0.6),
         ]);
 
-        Assert.Equal(["a:0000", "a:0001"], context.Sources.Select(s => s.Record.Key));
+        Assert.Equal(["a:0000", "a:0001"], context.Sources.Select(s => s.Record.ChunkId));
     }
 
     [Fact]
@@ -46,6 +46,6 @@ public class ContextAssemblerTests
     }
 
     private static RetrievedChunk Chunk(string document, int index, string text, double score) => new(
-        new ChunkRecord { Key = ChunkRecord.MakeKey(document, index), DocumentId = document, ChunkIndex = index, Title = "Doc " + document, Text = text },
+        new ChunkRecord { Key = ChunkRecord.MakeKey(document, index), ChunkId = ChunkRecord.MakeChunkId(document, index), DocumentId = document, ChunkIndex = index, Title = "Doc " + document, Text = text },
         score);
 }

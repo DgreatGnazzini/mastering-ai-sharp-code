@@ -32,4 +32,5 @@ Rules:
 | `ch03` | [docs/chapters/ch03.md](chapters/ch03.md) |
 | `ch04` | [docs/chapters/ch04.md](chapters/ch04.md) |
 | `ch05` | [docs/chapters/ch05.md](chapters/ch05.md) |
+| `ch06` | [docs/chapters/ch06.md](chapters/ch06.md) |
 | `ch07` | [docs/chapters/ch07.md](chapters/ch07.md) |
