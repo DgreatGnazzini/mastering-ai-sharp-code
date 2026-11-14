@@ -73,6 +73,12 @@ Classify a question into department, sensitivity, and a PHI flag (chapter 3):
 curl -X POST http://localhost:5080/classify -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"How many PTO days do I get?"}'
 ```
 
+Search the policy catalog by meaning (chapter 5):
+
+```bash
+curl -X POST http://localhost:5080/catalog/search -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"query":"I left my laptop on the train"}'
+```
+
 Extract a scanned prior authorization form into typed fields, as a claims analyst (chapter 4; needs `qwen2.5vl:3b`):
 
 ```bash
@@ -101,6 +107,7 @@ dotnet user-secrets set "AI:OpenAI:ApiKey" "<your-key>"
 | `docs/chapters/` | A short README per chapter: what it adds and how to run it |
 | `tests/PriorAuthBot.Tests` | Unit and regression tests |
 | `samples/documents` | Deductible Dynamics' fictional policies, protocols, and procedures |
+| `samples/catalog` | About 200 policy summaries for semantic search (chapter 5) |
 | `samples/files`, `samples/intake` | PDF, Word, and scanned samples, and an intake form (chapter 4) |
 | `Directory.Packages.props` | Every package version used in the book, pinned |
 

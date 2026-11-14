@@ -10,6 +10,10 @@ internal static class TestPaths
 
     public static string SampleIntake => Path.Combine(RepoRoot, "samples", "intake");
 
+    public static string PolicyCatalog => Path.Combine(RepoRoot, "samples", "catalog", "policy-catalog.json");
+
+    public static string CatalogQueries => Path.Combine(AppContext.BaseDirectory, "Catalog", "catalog-queries.json");
+
     public static string GoldenSet => Path.Combine(AppContext.BaseDirectory, "GoldenSet", "golden-set.json");
 
     private static string FindRepoRoot()
