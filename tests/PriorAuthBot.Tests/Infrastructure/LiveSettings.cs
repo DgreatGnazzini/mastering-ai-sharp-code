@@ -26,6 +26,9 @@ internal static class LiveSettings
     /// <summary>A model that reads images, for chapter 4.</summary>
     public static string VisionModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_VISION_MODEL") ?? "qwen2.5vl:3b";
 
+    /// <summary>The cross-encoder's folder (model.onnx and vocab.txt), from scripts/get-reranker.sh. Unset, its rows are skipped.</summary>
+    public static string? RerankerModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_RERANKER");
+
     public static string EmbeddingModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_EMBEDDING_MODEL") ?? "nomic-embed-text:v1.5";
 
     /// <summary>Folder for reports (chunking table, groundedness scores) that CI uploads as artifacts.</summary>

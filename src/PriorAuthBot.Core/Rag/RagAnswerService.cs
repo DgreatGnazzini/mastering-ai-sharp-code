@@ -45,10 +45,17 @@ public sealed partial class RagAnswerService(
             return new RagAnswer(DeclineMessage, Declined: true, Sources: []);
         }
 
+        // Structured citations (chapter 8): resolve the [n] markers against the sources the model was given.
+        var (cleaned, cited, removed) = Citations.Resolve(text, context.Sources.Count);
+        if (removed > 0)
+        {
+            LogInvalidCitations(logger, caller.UserId, removed);
+        }
+
         var sources = context.Sources
-            .Select((s, i) => new SourceReference(i + 1, s.Record.DocumentId, s.Record.Title, s.Record.PolicyNumber, s.Record.Section))
+            .Select((s, i) => Citations.Reference(i + 1, s.Record, cited.Contains(i + 1)))
             .ToList();
-        return new RagAnswer(text, Declined: false, sources);
+        return new RagAnswer(cleaned, Declined: false, sources);
     }
 
     /// <summary>The prompt, built in one place so tests and the groundedness check see exactly what the model sees.</summary>
@@ -61,6 +68,9 @@ public sealed partial class RagAnswerService(
             new(ChatRole.User, $"<sources>\n{context.Text}\n</sources>\n\nQuestion: {question}"),
         ];
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Removed {Count} citation markers that pointed at no source, in an answer for {UserId}.")]
+    private static partial void LogInvalidCitations(ILogger logger, string userId, int count);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Declined for {UserId}: {Reason}.")]
     private static partial void LogDeclined(ILogger logger, string userId, string reason);

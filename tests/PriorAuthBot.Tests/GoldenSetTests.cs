@@ -18,9 +18,10 @@ public sealed class GoldenSetTests(GoldenSetTests.IndexFixture fixture) : IClass
     public static TheoryData<string> Cases => GoldenSet.CaseIds();
 
     [Fact]
-    public void GoldenSetHasTwentyQuestionsIncludingPermissionCases()
+    public void GoldenSetHasTwentyFourQuestionsIncludingPermissionCases()
     {
-        Assert.Equal(20, Set.Cases.Count);
+        // Chapter 7's 20, plus chapter 8's four exact-term questions (codes and policy numbers).
+        Assert.Equal(24, Set.Cases.Count);
         Assert.True(Set.Cases.Count(c => c.Forbidden.Length > 0) >= 8, "At least 8 cases must be must-not-see cases.");
         Assert.True(Set.Cases.Count(c => c.ExpectDecline) >= 4, "At least 4 cases must expect a decline.");
     }

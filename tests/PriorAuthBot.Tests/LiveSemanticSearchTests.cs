@@ -53,7 +53,7 @@ public sealed class LiveSemanticSearchTests(ITestOutputHelper output)
             var found = new List<int?>();
             foreach (var query in queries)
             {
-                var hits = await catalog.SearchAsync(query.Query, 5, ct);
+                var hits = await catalog.SearchAsync(query.Query, CatalogSearchMode.Semantic, 5, ct);
                 var position = hits.ToList().FindIndex(h => h.Title == query.Expected);
                 found.Add(position < 0 ? null : position + 1);
             }

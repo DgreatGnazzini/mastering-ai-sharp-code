@@ -3,6 +3,8 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Prompts;
+using PriorAuthBot.Core.Retrieval;
+using PriorAuthBot.Core.Retrieval.Reranking;
 using PriorAuthBot.Tests.Infrastructure;
 using Xunit;
 
@@ -29,6 +31,26 @@ public class PromptSnapshotTests
     [Fact]
     public void GroundedAnswer() =>
         Snapshot.Match(PromptLibrary.GroundedAnswer, PromptLibrary.Get(PromptLibrary.GroundedAnswer));
+
+    [Fact]
+    public async Task RerankPassages()
+    {
+        var model = new RecordingChatClient(_ => """{"scores":[{"passage":1,"score":3},{"passage":2,"score":0}]}""");
+
+        await new LlmReranker(model).ScoreAsync("{question}", ["{passage 1}", "{passage 2}"], TestContext.Current.CancellationToken);
+
+        Snapshot.Match(PromptLibrary.RerankPassages, Describe(model.Requests[0], model.Options[0]));
+    }
+
+    [Fact]
+    public async Task RewriteQuery()
+    {
+        var model = new RecordingChatClient(_ => """{"queries":["first","second","third"]}""");
+
+        await new QueryRewriter(model).ExpandAsync("{question}", 3, TestContext.Current.CancellationToken);
+
+        Snapshot.Match(PromptLibrary.RewriteQuery, Describe(model.Requests[0], model.Options[0]));
+    }
 
     private static string Describe(IReadOnlyList<ChatMessage> messages, ChatOptions? options)
     {

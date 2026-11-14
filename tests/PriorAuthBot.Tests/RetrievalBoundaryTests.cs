@@ -15,6 +15,12 @@ public sealed class RetrievalBoundaryTests
         "src/PriorAuthBot.Core/Retrieval/SecureRetriever.cs",
         "src/PriorAuthBot.Core/Ingestion/IngestionPipeline.cs",
         "src/PriorAuthBot.Core/Retrieval/VectorStoreServiceCollectionExtensions.cs",
+
+        // Chapter 8: the keyword side of hybrid search. Each takes the caller's groups and filters
+        // inside its own query, and SecureRetriever checks every record it returns.
+        "src/PriorAuthBot.Core/Retrieval/Keyword/IKeywordSearch.cs",
+        "src/PriorAuthBot.Core/Retrieval/Keyword/InMemoryKeywordSearch.cs",
+        "src/PriorAuthBot.Core/Retrieval/Keyword/PostgresKeywordSearch.cs",
     ];
 
     [Fact]

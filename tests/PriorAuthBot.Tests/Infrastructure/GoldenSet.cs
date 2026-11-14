@@ -43,8 +43,12 @@ internal sealed record GoldenCase(
     string[]? ExpectedDocuments,
     string[]? MustNotSee,
     bool ExpectDecline,
-    string[]? AnswerMustContain)
+    string[]? AnswerMustContain,
+    string? Kind = null)
 {
+    /// <summary>Codes and policy numbers (chapter 8): vector search alone is not expected to find these.</summary>
+    public bool IsExactTerm => Kind == "exact-term";
+
     public string[] Expected => ExpectedDocuments ?? [];
 
     public string[] Forbidden => MustNotSee ?? [];
