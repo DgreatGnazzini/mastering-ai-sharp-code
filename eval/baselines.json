@@ -29,6 +29,10 @@
         "Completeness": 3.68,
         "Citation faithfulness": 0.78,
         "Contains expected fact": 0.79
+      },
+      "tools": {
+        "Tool selection": 0.8,
+        "Tool arguments": 0.86
       }
     }
   }
