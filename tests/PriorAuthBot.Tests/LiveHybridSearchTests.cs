@@ -134,7 +134,7 @@ public sealed class LiveHybridSearchTests(ITestOutputHelper output)
         report.Append("| Configuration | Expected document found | MRR | Exact-term cases found | Declines kept (no results) | Leaks | Time per question |\n|---|---|---|---|---|---|---|\n");
         var scoreNotes = new StringBuilder();
         var leaks = 0;
-        var exactIds = new HashSet<string>(["gs21-cpt-code-claims", "gs23-policy-number-hr", "gs24-policy-number-claims"]);
+        var exactIds = Set.Cases.Where(c => c.IsExactTerm && c.Expected.Length > 0).Select(c => c.Id).ToHashSet();
 
         foreach (var (name, overrides) in configurations)
         {

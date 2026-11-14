@@ -52,7 +52,9 @@ public sealed class RerankOptions
 
     /// <summary>
     /// Candidates the reranker scores below this are dropped. Its scale depends on the reranker: a
-    /// cross-encoder's raw logit, or the LLM reranker's 0 to 3. Measured with the golden set.
+    /// cross-encoder's raw logit, or the LLM reranker's 0 to 3. Measured with the golden set: on the
+    /// chapter 8 run the cross-encoder scored every expected document at 0.87 or more and everything
+    /// returned for a decline question at -4.65 or less, so appsettings.json sets 0 (section 8.4).
     /// </summary>
     public double? MinScore { get; set; }
 

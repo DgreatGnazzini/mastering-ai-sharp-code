@@ -1,5 +1,5 @@
 {
-  "description": "Golden set over samples/documents: 20 questions from chapter 7, plus 4 exact-term questions from chapter 8 (billing codes and policy numbers). expectedDocuments must reach the context; mustNotSee documents must never be retrieved for that user; expectDecline means PriorAuthBot must say it does not know. Chapter 9 grows this to about 100 questions.",
+  "description": "Golden set over samples/documents: 20 questions from chapter 7, plus 4 exact-term questions from chapter 8 (billing codes and policy numbers, kind \"exact-term\"), which need hybrid search. expectedDocuments must reach the context; mustNotSee documents must never be retrieved for that user; expectDecline means PriorAuthBot must say it does not know. Chapter 9 grows this to about 100 questions.",
   "offline": {
     "minScore": 0.25
   },
@@ -248,7 +248,8 @@
       ],
       "answerMustContain": [
         "six weeks"
-      ]
+      ],
+      "kind": "exact-term"
     },
     {
       "id": "gs22-cpt-code-contractor",
@@ -257,7 +258,8 @@
       "mustNotSee": [
         "prior-auth-lumbar-mri"
       ],
-      "expectDecline": true
+      "expectDecline": true,
+      "kind": "exact-term"
     },
     {
       "id": "gs23-policy-number-hr",
@@ -268,7 +270,8 @@
       ],
       "answerMustContain": [
         "40 hours"
-      ]
+      ],
+      "kind": "exact-term"
     },
     {
       "id": "gs24-policy-number-claims",
@@ -276,7 +279,8 @@
       "question": "What is CLM-620 about?",
       "expectedDocuments": [
         "claims-appeals-procedure"
-      ]
+      ],
+      "kind": "exact-term"
     }
   ]
 }
