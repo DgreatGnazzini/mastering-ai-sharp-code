@@ -96,7 +96,9 @@ jobs:
 
       - name: Add the reports to the job summary
         if: always()
-        run: cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+        run: |
+          cat eval-reports/*.md || true
+          cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
   qdrant:
     # Chapter 6: the same permission tests against a second store, chosen by configuration.
@@ -134,7 +136,9 @@ jobs:
 
       - name: Add the reports to the job summary
         if: always()
-        run: cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+        run: |
+          cat eval-reports/*.md || true
+          cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
   rag-eval:
     # Chapter 7: the golden set against a real local model (Ollama), plus one groundedness check
