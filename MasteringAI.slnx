@@ -4,7 +4,12 @@
     <Project Path="src/PriorAuthBot.AppHost/PriorAuthBot.AppHost.csproj" />
     <Project Path="src/PriorAuthBot.Core/PriorAuthBot.Core.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/mcp/DeductibleDynamics.Formulary/DeductibleDynamics.Formulary.csproj" />
+    <Project Path="samples/mock-apis/DeductibleDynamics.MockHr/DeductibleDynamics.MockHr.csproj" />
+  </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/PriorAuthBot.McpVet/PriorAuthBot.McpVet.csproj" />
     <Project Path="tools/PriorAuthBot.TokenCost/PriorAuthBot.TokenCost.csproj" />
   </Folder>
   <Folder Name="/eval/">

@@ -11,6 +11,7 @@ namespace PriorAuthBot.Eval;
 ///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Offline            retrieval and leak checks, no model
 ///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Offline --answers  plus every answer, from the offline client
 ///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Ollama --answers   plus LLM judges on the judged sample
+///   add --tools to any of them for chapter 10's tool cases (tool choice, arguments, approvals)
 /// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
 /// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
 /// </summary>
@@ -95,6 +96,27 @@ internal static class EvalProgram
             judgeClient?.Dispose();
         }
 
+        // 2b. Tools (chapter 10): which tool the model picks, with which arguments, and that no write runs unapproved.
+        ToolSummary? toolSummary = null;
+        if (settings.Tools)
+        {
+            var owned = new List<IAsyncDisposable>();
+            await using (var host = EvalHost.Create(settings.Configuration(set), cache, configure: s => ToolEvaluation.Configure(s, owned)))
+            {
+                await host.IngestSamplesAsync();
+                var toolResults = await ToolEvaluation.RunAsync(host, set, ToolCaseSet.Load(), Console.WriteLine);
+                toolSummary = ToolSummary.Of(toolResults, ((Core.Tools.InMemoryHelpDesk)host.Get<Core.Tools.IHelpDesk>()).Count);
+                var toolReport = Reports.Tools(settings.Provider, toolResults, toolSummary);
+                await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-tools-{settings.Provider.ToLowerInvariant()}.md"), toolReport);
+                Console.WriteLine(toolReport);
+            }
+
+            foreach (var server in owned)
+            {
+                await server.DisposeAsync();
+            }
+        }
+
         if (cache is not null)
         {
             Console.WriteLine($"Answer and embedding cache: {cache.Hits} hits, {cache.Misses} misses.");
@@ -107,8 +129,8 @@ internal static class EvalProgram
         }
 
         var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
-        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary);
-        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary));
+        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary);
+        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary));
         await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
         Console.WriteLine(gateReport);
         return gate.Ok ? 0 : 1;

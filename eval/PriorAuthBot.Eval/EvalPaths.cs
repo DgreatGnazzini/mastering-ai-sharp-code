@@ -9,6 +9,12 @@ internal static class EvalPaths
 
     public static string Baselines => Path.Combine(RepoRoot, "eval", "baselines.json");
 
+    public static string ToolCases => Path.Combine(RepoRoot, "eval", "datasets", "tool-cases.json");
+
+    public static string ApiSettings => Path.Combine(RepoRoot, "src", "PriorAuthBot.Api", "appsettings.json");
+
+    public static string MockHrEmployees => Path.Combine(RepoRoot, "samples", "mock-apis", "DeductibleDynamics.MockHr", "employees.json");
+
     public static string SampleDocuments => Path.Combine(RepoRoot, "samples", "documents");
 
     private static string FindRepoRoot()

@@ -18,6 +18,7 @@ public static partial class PromptLibrary
     public const string ExtractIntakeForm = "extract-intake-form.v1";
     public const string RerankPassages = "rerank-passages.v1";
     public const string RewriteQuery = "rewrite-query.v1";
+    public const string AssistantTools = "assistant-tools.v1";
 
     private static readonly ConcurrentDictionary<string, string> Cache = new();
 

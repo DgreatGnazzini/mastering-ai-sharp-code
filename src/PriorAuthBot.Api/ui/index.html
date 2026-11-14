@@ -8,6 +8,8 @@
   Chapter 8: the smallest UI that shows an answer with its citations. Development only: it signs in
   as a demo persona with the X-Demo-User header. Every link goes through /documents/{id}, which
   checks the persona's groups again.
+  Chapter 10: "Use tools" sends the question to /assist. A proposed write shows as a card with the
+  exact arguments, and nothing runs until this persona presses Approve.
 -->
 <style>
   :root { color-scheme: light dark; --fg: #1d2330; --muted: #5b6475; --line: #d9dde5; --bg: #fbfbfd; --accent: #2457c5; }
@@ -25,6 +27,9 @@
   .doc { margin-top: 1.25rem; border-top: 1px solid var(--line); padding-top: 1rem; }
   .doc section { margin-bottom: 1rem; } .doc section:target { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
   .doc h3 { font-size: 1rem; margin: 0 0 .25rem; } .doc p { margin: 0; white-space: pre-wrap; }
+  .calls { color: var(--muted); font-size: .9rem; margin: .75rem 0 0; padding-left: 1.25rem; }
+  .card { margin-top: .75rem; padding: .75rem; border: 1px solid var(--accent); border-radius: 8px; }
+  .card code { white-space: pre-wrap; } .card button.secondary { background: transparent; color: inherit; border-color: var(--line); }
 </style>
 </head>
 <body>
@@ -38,6 +43,10 @@
     <option value="compliance">Dana Whitfield, privacy</option>
     <option value="contractor">Casey Lin, contractor</option>
   </select>
+  <select id="mode" aria-label="Mode">
+    <option value="ask">Ask the documents</option>
+    <option value="assist">Use tools</option>
+  </select>
   <input id="question" type="text" placeholder="Ask about a policy, such as: Does CPT 72148 need prior authorization?" required maxlength="500">
   <button>Ask</button>
 </form>
@@ -47,9 +56,31 @@ const out = document.getElementById('out');
 const user = () => document.getElementById('user').value;
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Demo-User': user() }, body: body && JSON.stringify(body) });
+
+// Chapter 10: the tool trace, and a card for each write that waits for approval.
+async function assist(message) {
+  const res = await post('/assist', { message });
+  if (!res.ok) { out.innerHTML = `<p class="tag">Request failed: ${res.status}</p>`; return; }
+  const reply = await res.json();
+  const calls = reply.toolCalls.map(c => `<li>${esc(c.name)} ${esc(c.arguments)}: ${esc(c.status)}</li>`).join('');
+  const cards = reply.pendingActions.map(a => `<div class="card" data-action="${esc(a.id)}"><strong>Approve this?</strong><p>${esc(a.description)}</p>` +
+    `<code>${esc(JSON.stringify(a.arguments, null, 2))}</code><p><button data-verb="approve">Approve</button> <button class="secondary" data-verb="reject">Cancel</button></p></div>`).join('');
+  out.innerHTML = `<div class="answer">${esc(reply.answer)}${calls ? '<ul class="calls">' + calls + '</ul>' : ''}</div>${cards}`;
+}
+
+out.addEventListener('click', async e => {
+  const button = e.target.closest('button[data-verb]');
+  if (!button) return;
+  const card = button.closest('[data-action]');
+  const res = await post(`/actions/${card.dataset.action}/${button.dataset.verb}`);
+  card.innerHTML = res.status === 200 ? `<p>${esc((await res.json()).message)}</p>` : res.status === 204 ? '<p>Cancelled.</p>' : '<p class="tag">That action is no longer available.</p>';
+});
+
 document.getElementById('ask').addEventListener('submit', async e => {
   e.preventDefault();
   out.innerHTML = '<p class="tag">Thinking…</p>';
+  if (document.getElementById('mode').value === 'assist') { await assist(document.getElementById('question').value); return; }
   const res = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Demo-User': user() }, body: JSON.stringify({ question: document.getElementById('question').value }) });
   if (!res.ok) { out.innerHTML = `<p class="tag">Request failed: ${res.status}</p>`; return; }
   const answer = await res.json();

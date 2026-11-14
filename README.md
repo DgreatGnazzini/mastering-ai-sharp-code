@@ -85,7 +85,15 @@ Extract a scanned prior authorization form into typed fields, as a claims analys
 curl -X POST http://localhost:5080/intake -H "X-Demo-User: claims" -F "file=@samples/intake/intake-form-001.png;type=image/png"
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI, [docs/chapters/ch08.md](docs/chapters/ch08.md) for hybrid search, the reranker, and the chat page at `/ui`, and [docs/chapters/ch09.md](docs/chapters/ch09.md) for the evaluation suite (`dotnet run --project eval/PriorAuthBot.Eval`).
+Let PriorAuthBot use tools (chapter 10): look up a policy, check your own PTO balance through the mock HR API, search the formulary MCP server, or propose a help desk ticket that runs only when you approve it. Start the mock HR API first (`dotnet run --project samples/mock-apis/DeductibleDynamics.MockHr`; the AppHost starts it for you):
+
+```bash
+curl -X POST http://localhost:5080/assist -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"message":"How much PTO do I have left?"}'
+curl -X POST http://localhost:5080/assist -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"message":"My laptop screen is cracked. Please open a ticket."}'
+curl -X POST http://localhost:5080/actions/<id from pendingActions>/approve -H "X-Demo-User: nurse"
+```
+
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI, [docs/chapters/ch08.md](docs/chapters/ch08.md) for hybrid search, the reranker, and the chat page at `/ui`, [docs/chapters/ch09.md](docs/chapters/ch09.md) for the evaluation suite (`dotnet run --project eval/PriorAuthBot.Eval`), and [docs/chapters/ch10.md](docs/chapters/ch10.md) for tools, approvals, and MCP.
 
 ## Configuration and secrets
 
@@ -104,10 +112,14 @@ dotnet user-secrets set "AI:OpenAI:ApiKey" "<your-key>"
 | `src/PriorAuthBot.Core` | Chat, retrieval, security, and evaluation logic |
 | `src/PriorAuthBot.AppHost` | .NET Aspire AppHost: local containers and the API |
 | `tools/PriorAuthBot.TokenCost` | Token and cost calculator (chapter 1) |
+| `tools/PriorAuthBot.McpVet` | Prints what an MCP server offers and the fingerprints to pin (chapter 10) |
+| `samples/mcp/DeductibleDynamics.Formulary` | A small MCP server for the drug formulary (chapter 10) |
+| `samples/mock-apis/DeductibleDynamics.MockHr` | The mock HR API the PTO tool calls on behalf of the user (chapter 10) |
 | `docs/chapters/` | A short README per chapter: what it adds and how to run it |
 | `tests/PriorAuthBot.Tests` | Unit and regression tests |
 | `eval/PriorAuthBot.Eval` | The evaluation suite: retrieval metrics, leak checks, LLM judges, reports, and the regression gate (chapter 9) |
 | `eval/datasets/golden-set.json` | The golden set: 105 synthetic questions, 27 of them permission cases |
+| `eval/datasets/tool-cases.json` | 18 cases whose right answer is a tool call, or none (chapter 10) |
 | `eval/baselines.json` | The numbers a change must not fall below (CODEOWNERS review) |
 | `samples/documents` | Deductible Dynamics' fictional policies, protocols, and procedures |
 | `samples/catalog` | About 200 policy summaries for semantic search (chapter 5) |

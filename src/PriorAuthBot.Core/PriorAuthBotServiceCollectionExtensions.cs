@@ -11,7 +11,10 @@ using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
 using PriorAuthBot.Core.Ingestion;
 using PriorAuthBot.Core.Rag;
+using PriorAuthBot.Core.Mcp;
 using PriorAuthBot.Core.Retrieval;
+using PriorAuthBot.Core.Tools;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace PriorAuthBot.Core;
 
@@ -42,6 +45,34 @@ public static class PriorAuthBotServiceCollectionExtensions
 
         services.AddOptions<GroupMappingOptions>().Bind(configuration.GetSection(GroupMappingOptions.SectionName));
         services.AddSingleton<CallerIdentityFactory>();
+
+        services.AddPriorAuthBotTools(configuration);
+        return services;
+    }
+
+    /// <summary>
+    /// Chapter 10: PriorAuthBot's tools, the on-behalf-of token provider for the HR API, the pending
+    /// approvals, and the allowlisted MCP servers.
+    /// </summary>
+    public static IServiceCollection AddPriorAuthBotTools(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<HrApiOptions>().Bind(configuration.GetSection(HrApiOptions.SectionName));
+        services.AddOptions<DownstreamApiOptions>().Bind(configuration.GetSection(DownstreamApiOptions.SectionName));
+        services.AddOptions<McpOptions>().Bind(configuration.GetSection(McpOptions.SectionName));
+
+        services.TryAddSingleton<IDownstreamTokenProvider, OnBehalfOfTokenProvider>();
+        services.TryAddSingleton(sp => new HrClient(
+            new HttpClient { BaseAddress = sp.GetRequiredService<IOptions<HrApiOptions>>().Value.BaseAddress, Timeout = TimeSpan.FromSeconds(10) },
+            sp.GetRequiredService<IDownstreamTokenProvider>(),
+            sp.GetRequiredService<IOptions<HrApiOptions>>()));
+        services.TryAddSingleton<IHelpDesk>(_ => new InMemoryHelpDesk());
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton(sp => new PendingActionStore(sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<PriorAuthBotTools>();
+        services.AddSingleton(sp => new McpToolProvider(
+            sp.GetRequiredService<IOptions<McpOptions>>(),
+            sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>() ?? Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
+        services.AddSingleton<AssistantService>();
         return services;
     }
 

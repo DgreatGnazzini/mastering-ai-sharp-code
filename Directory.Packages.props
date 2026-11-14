@@ -43,7 +43,12 @@
   <ItemGroup Label="Reranking with a local cross-encoder (ch08)">
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
   </ItemGroup>
-  <ItemGroup Label="Agents (ch09-ch10)">
+  <ItemGroup Label="Tools and the Model Context Protocol (ch10)">
+    <!-- The official MCP C# SDK: the client (ModelContextProtocol) and the ASP.NET Core server transport. -->
+    <PackageVersion Include="ModelContextProtocol" Version="2.4.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
+  </ItemGroup>
+  <ItemGroup Label="Agents (ch11)">
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.28.0" />
   </ItemGroup>

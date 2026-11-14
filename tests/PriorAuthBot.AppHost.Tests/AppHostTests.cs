@@ -18,7 +18,7 @@ public sealed class AppHostTests
 
         var names = builder.Resources.Select(r => r.Name).ToHashSet();
 
-        Assert.Superset(new HashSet<string> { "postgres", "priorauthbot", "ollama", "chat", "embedding", "vision", "api" }, names);
+        Assert.Superset(new HashSet<string> { "postgres", "priorauthbot", "ollama", "chat", "embedding", "vision", "hr", "api" }, names);
     }
 
     [Fact]
