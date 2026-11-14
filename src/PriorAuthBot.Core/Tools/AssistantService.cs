@@ -53,12 +53,40 @@ public sealed partial class AssistantService(
 
         var response = await chatClient.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
-        // The trace, in order: every call that ran, and every call that stopped for approval.
         var contents = response.Messages.SelectMany(m => m.Contents).ToList();
-        var results = contents.OfType<FunctionResultContent>().ToDictionary(r => r.CallId, StringComparer.Ordinal);
+        var calls = Trace(contents);
+        var proposed = HoldForApproval(contents, available, caller);
+
+        return new AssistantReply(ComposeAnswer(response.Text, proposed), calls, proposed);
+    }
+
+    /// <summary>The model's answer, with PriorAuthBot's own words about any write that waits for approval.</summary>
+    public static string ComposeAnswer(string? modelText, IReadOnlyList<PendingActionView> proposed)
+    {
+        ArgumentNullException.ThrowIfNull(proposed);
+        var answer = modelText?.Trim() ?? string.Empty;
+        if (proposed.Count > 0)
+        {
+            return $"{(answer.Length > 0 ? answer + "\n\n" : string.Empty)}Nothing has been submitted yet. Approve or cancel: {string.Join("; ", proposed.Select(p => p.Description))}.";
+        }
+
+        return answer.Length == 0 ? "I could not complete that request." : answer;
+    }
+
+    /// <summary>The trace, in order: every call that ran, and every call that stopped for approval.</summary>
+    public static IReadOnlyList<ToolCallRecord> Trace(IEnumerable<AIContent> contents)
+    {
+        ArgumentNullException.ThrowIfNull(contents);
+        var list = contents as IList<AIContent> ?? contents.ToList();
+        var results = new Dictionary<string, FunctionResultContent>(StringComparer.Ordinal);
+        foreach (var result in list.OfType<FunctionResultContent>())
+        {
+            results[result.CallId] = result;
+        }
+
         var calls = new List<ToolCallRecord>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var content in contents)
+        foreach (var content in list)
         {
             var call = content switch
             {
@@ -75,6 +103,19 @@ public sealed partial class AssistantService(
             calls.Add(new ToolCallRecord(call.Name, Serialize(call.Arguments), status));
         }
 
+        return calls;
+    }
+
+    /// <summary>
+    /// Turns every approval request in a response into a <see cref="PendingAction"/> for the caller,
+    /// with a snapshot of the arguments. Chapter 11's agent uses this too, so a write the agent
+    /// proposes waits for the same approval as one from <see cref="AskAsync"/>.
+    /// </summary>
+    public IReadOnlyList<PendingActionView> HoldForApproval(IEnumerable<AIContent> contents, IReadOnlyList<ToolEntry> available, ToolCaller caller)
+    {
+        ArgumentNullException.ThrowIfNull(contents);
+        ArgumentNullException.ThrowIfNull(available);
+        ArgumentNullException.ThrowIfNull(caller);
         var proposed = new List<PendingActionView>();
         foreach (var request in contents.OfType<ToolApprovalRequestContent>())
         {
@@ -90,17 +131,7 @@ public sealed partial class AssistantService(
             LogProposed(logger, caller.UserId, call.Name, action.Id);
         }
 
-        var answer = response.Text.Trim();
-        if (proposed.Count > 0)
-        {
-            answer = $"{(answer.Length > 0 ? answer + "\n\n" : string.Empty)}Nothing has been submitted yet. Approve or cancel: {string.Join("; ", proposed.Select(p => p.Description))}.";
-        }
-        else if (answer.Length == 0)
-        {
-            answer = "I could not complete that request.";
-        }
-
-        return new AssistantReply(answer, calls, proposed);
+        return proposed;
     }
 
     /// <summary>

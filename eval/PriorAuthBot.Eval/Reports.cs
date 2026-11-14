@@ -166,6 +166,71 @@ internal static class Reports
         return s.ToString();
     }
 
+    public static string Agents(string provider, IReadOnlyList<AgentCaseResult> results, AgentSummary summary)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+        ArgumentNullException.ThrowIfNull(summary);
+        var s = new StringBuilder();
+        s.Append(CultureInfo.InvariantCulture, $"### Agents, {provider}: {results.Count} agent cases\n\n");
+        s.Append("| Metric | Result |\n|---|---|\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Exception requests that stopped in the right place | {summary.OutcomesCorrect} of {summary.Exceptions} ({summary.Outcome:0.00}) |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Drafts with the right hours | {summary.HoursCorrect} of {summary.WithHours} ({summary.Hours:0.00}) |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Conversation turns with the right first tool | {summary.TurnsCorrect} of {summary.TurnsScored} ({summary.Tools:0.00}) |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Agent writes held for approval | {summary.ApprovalsHeld} of {summary.ExpectedApprovals} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Exceptions decided without the approver | {summary.DecidedWithoutApprover} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Runs over a limit | {summary.OverLimits} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Most model calls in one run | {summary.MaxModelCalls} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Highest cost of one run | ${summary.MaxCost:0.000000} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Leaks in answers | {summary.Leaks} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Errors | {summary.Errors} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Time per case | {(results.Count == 0 ? 0 : results.Average(r => r.Elapsed.TotalSeconds)):0.0} s |\n\n");
+
+        s.Append("| Case | User | Kind | Expected | Result | Model calls | Notes |\n|---|---|---|---|---|---|---|\n");
+        foreach (var r in results)
+        {
+            var expected = r.Case.Kind == AgentCase.Exception
+                ? $"{r.Case.ExpectStatus}{(r.Case.ExpectStopCode is null ? string.Empty : $" ({r.Case.ExpectStopCode})")}{(r.Case.ExpectHours is { } h ? $", {h:0.##} h" : string.Empty)}"
+                : string.Join(" -> ", r.Case.ExpectTools ?? []);
+            var notes = new List<string>();
+            if (r.OutcomeOk == false)
+            {
+                notes.Add("wrong outcome");
+            }
+
+            if (r.HoursOk == false)
+            {
+                notes.Add("wrong hours");
+            }
+
+            if (r.TurnsCorrect < r.TurnsScored)
+            {
+                notes.Add($"{r.TurnsScored - r.TurnsCorrect} wrong tool");
+            }
+
+            if (!r.ApprovalOk)
+            {
+                notes.Add("write not held");
+            }
+
+            notes.AddRange(r.Missing.Select(m => $"missing \"{m}\""));
+            notes.AddRange(r.Leaks.Select(_ => "LEAK"));
+            if (r.Error is not null)
+            {
+                notes.Add(r.Error);
+            }
+
+            s.Append(CultureInfo.InvariantCulture,
+                $"| {r.Case.Id} | {r.Case.User} | {r.Case.Kind} | {expected} | {r.Summary.Replace("|", "\\|", StringComparison.Ordinal)} | {r.ModelCalls} | {string.Join("; ", notes)} |\n");
+        }
+
+        foreach (var leak in results.SelectMany(r => r.Leaks))
+        {
+            s.Append("\n- LEAK ").Append(leak);
+        }
+
+        return s.ToString();
+    }
+
     public static string Gate(string provider, GateResult gate, ProviderBaseline proposed)
     {
         ArgumentNullException.ThrowIfNull(gate);

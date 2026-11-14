@@ -49,8 +49,14 @@
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
   </ItemGroup>
   <ItemGroup Label="Agents (ch11)">
+    <!--
+      Microsoft Agent Framework: ChatClientAgent and sessions (Microsoft.Agents.AI) and workflows with
+      request ports and checkpoints (Microsoft.Agents.AI.Workflows). Both build on
+      Microsoft.Extensions.AI.Abstractions 10.11 and run with the 11.0 packages above. PriorAuthBot uses
+      only APIs without an [Experimental] (MAAI001) marker; TreatWarningsAsErrors makes that a build rule.
+    -->
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.28.0" />
   </ItemGroup>
   <ItemGroup Label="Evaluation (ch07-ch09)">
     <PackageVersion Include="Microsoft.Extensions.AI.Evaluation" Version="11.0.0" />

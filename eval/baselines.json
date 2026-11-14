@@ -15,6 +15,11 @@
       "tools": {
         "Tool selection": 1.0,
         "Tool arguments": 1.0
+      },
+      "agents": {
+        "Exception outcome": 1.0,
+        "Exception hours": 1.0,
+        "Conversation tools": 1.0
       }
     },
     "Ollama": {
