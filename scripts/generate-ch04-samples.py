@@ -99,7 +99,7 @@ def scan(img, angle):
 
 
 # 3. A scanned PDF: the same kind of policy, but only as an image of a page. No text layer.
-W, H = 1700, 2200  # 200 dpi letter
+W, H = 1700, 2200  # drawn at 200 dpi, then saved at 100 dpi like a standard-resolution fax
 page = Image.new("L", (W, H), 255)
 d = ImageDraw.Draw(page)
 title, body_font, head_font = ImageFont.truetype(FONT_BOLD, 52), ImageFont.truetype(FONT, 34), ImageFont.truetype(FONT_BOLD, 38)
@@ -123,7 +123,9 @@ truth = ["# Fax Handling Procedure", "", "Procedure CMP-412 | Compliance | Revis
 for heading, lines in SECTIONS:
     truth += ["", f"## {heading}", "", " ".join(lines)]
 (FILES / "fax-handling-procedure-scanned.expected.txt").write_text("\n".join(truth) + "\n")
-scanned = scan(page, -1.2)
+# Halved to 100 dpi: a 200 dpi page is about 4,100 image tokens for qwen2.5vl, and a 3B model on a
+# CPU takes longer than the client timeout to read it. A real fax is often this coarse anyway.
+scanned = scan(page, -1.2).resize((W // 2, H // 2), Image.LANCZOS)
 c = canvas.Canvas(str(FILES / "fax-handling-procedure-scanned.pdf"), pagesize=LETTER)
 tmp = FILES / "_scan.png"
 scanned.save(tmp)
@@ -173,6 +175,6 @@ for i, opt in enumerate(["Yes", "No"]):
     d.text((x + 50, y), opt, font=label, fill=0)
 d.line((760 + 4, y + 8, 760 + 28, y + 32), fill=0, width=4)
 d.line((760 + 28, y + 8, 760 + 4, y + 32), fill=0, width=4)
-scan(form, 0.8).save(INTAKE / "intake-form-001.png", optimize=True)
+scan(form, 0.8).resize((W // 2, 750), Image.LANCZOS).save(INTAKE / "intake-form-001.png", optimize=True)
 (INTAKE / "intake-form-001.expected.json").write_text(json.dumps(FORM, indent=2) + "\n")
 print("done")
