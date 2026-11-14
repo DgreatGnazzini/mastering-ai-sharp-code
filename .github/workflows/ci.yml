@@ -96,10 +96,6 @@ jobs:
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Pgvector" --output Detailed
 
-      - name: Show the Ollama log if a step failed
-        if: failure()
-        run: tail -n 100 "$RUNNER_TEMP/ollama.log" || true
-
       - name: Add the reports to the job summary
         if: always()
         run: |
@@ -139,10 +135,6 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Qdrant" --output Detailed
-
-      - name: Show the Ollama log if a step failed
-        if: failure()
-        run: tail -n 100 "$RUNNER_TEMP/ollama.log" || true
 
       - name: Add the reports to the job summary
         if: always()
