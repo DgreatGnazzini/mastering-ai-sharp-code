@@ -232,7 +232,7 @@ jobs:
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveHybridSearchTests" --output Detailed
 
-      # The vision model is the last of five to load, on a runner with about 8 GB of memory. In two
+      # The vision model is the last of four Ollama models to load, on a runner with about 8 GB of memory. In two
       # runs on PR #8 the runner shut down and then Ollama stopped during that step, with every earlier
       # step green.
       # Unload the other models first, and restart Ollama if it has already gone.
