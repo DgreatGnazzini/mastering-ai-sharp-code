@@ -6,28 +6,41 @@ using Xunit;
 namespace PriorAuthBot.Tests;
 
 /// <summary>
-/// The chapter 7 golden set, run on every push with the offline embedder: no model, no network,
-/// same result every time. Each case checks three things: the expected documents reach the
-/// context, the "must not see" documents never come back for that user, and questions with no
-/// visible answer are declined without calling the model.
+/// The golden set, run on every push with the offline embedder: no model, no network, same result
+/// every time. The leak check runs on all 105 questions and must hold for every one. The expected
+/// documents and declines are hard assertions for the 24 questions of chapters 7 and 8; from
+/// chapter 9 on, the eval project measures them as recall and gates on its baseline instead, because
+/// a crude offline embedder is not expected to get every paraphrase right.
 /// </summary>
 public sealed class GoldenSetTests(GoldenSetTests.IndexFixture fixture) : IClassFixture<GoldenSetTests.IndexFixture>
 {
     private static readonly GoldenSet Set = GoldenSet.Load();
 
-    public static TheoryData<string> Cases => GoldenSet.CaseIds();
+    public static TheoryData<string> Cases => GoldenCases.Ids();
+
+    public static TheoryData<string> Chapter8Cases => GoldenCases.Ids(c => c.Chapter <= 8);
 
     [Fact]
-    public void GoldenSetHasTwentyFourQuestionsIncludingPermissionCases()
+    public void GoldenSetHasAboutAHundredQuestionsIncludingPermissionCases()
     {
-        // Chapter 7's 20, plus chapter 8's four exact-term questions (codes and policy numbers).
-        Assert.Equal(24, Set.Cases.Count);
-        Assert.True(Set.Cases.Count(c => c.Forbidden.Length > 0) >= 8, "At least 8 cases must be must-not-see cases.");
-        Assert.True(Set.Cases.Count(c => c.ExpectDecline) >= 4, "At least 4 cases must expect a decline.");
+        // Chapter 7's 20, chapter 8's four exact-term questions, and chapter 9's 81.
+        Assert.Equal(105, Set.Cases.Count);
+        Assert.True(Set.Cases.Count(c => c.IsPermissionCase) >= 20, "At least 20 cases must be must-not-see cases.");
+        Assert.True(Set.Cases.Count(c => c.ExpectDecline) >= 20, "At least 20 cases must expect a decline.");
+        Assert.All(Set.Cases, c => Assert.Contains(c.Kind, new[] { GoldenCase.Fact, GoldenCase.ExactTerm, GoldenCase.Permission, GoldenCase.OutOfScope }));
+        Assert.All(Set.Cases, c => Assert.True(Set.Users.ContainsKey(c.User), $"{c.Id}: unknown user {c.User}."));
+        Assert.Equal(Set.Cases.Count, Set.Cases.Select(c => c.Id).Distinct().Count());
+    }
+
+    [Fact]
+    public void EveryJudgedAnswerHasAGroundTruth()
+    {
+        // The completeness judge compares the answer with expectedAnswer, so a judged case without one would be scored against nothing.
+        Assert.All(Set.Cases.Where(c => c.AnswerEval), c => Assert.False(string.IsNullOrWhiteSpace(c.ExpectedAnswer), $"{c.Id} has no expectedAnswer."));
     }
 
     [Theory]
-    [MemberData(nameof(Cases))]
+    [MemberData(nameof(Chapter8Cases))]
     public async Task ExpectedDocumentsReachTheContext(string caseId)
     {
         var goldenCase = Set.Case(caseId);
@@ -57,7 +70,7 @@ public sealed class GoldenSetTests(GoldenSetTests.IndexFixture fixture) : IClass
     }
 
     [Theory]
-    [MemberData(nameof(Cases))]
+    [MemberData(nameof(Chapter8Cases))]
     public async Task DeclinesExactlyWhenExpected(string caseId)
     {
         var goldenCase = Set.Case(caseId);

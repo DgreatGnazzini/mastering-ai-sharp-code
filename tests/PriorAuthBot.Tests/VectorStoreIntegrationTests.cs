@@ -49,6 +49,13 @@ public abstract class VectorStoreIntegrationTests : IAsyncLifetime
 
             Assert.All(results, r => Assert.True(caller.IsInAnyGroup(r.Record.AllowedGroups), $"{goldenCase.Id}: {r.Record.ChunkId} leaked."));
             Assert.All(results, r => Assert.DoesNotContain(r.Record.DocumentId, goldenCase.Forbidden));
+
+            // From chapter 9, the newer questions are measured by the eval project, not asserted one by one.
+            if (goldenCase.Chapter > 8)
+            {
+                continue;
+            }
+
             // Without a keyword side (Qdrant, for now), hybrid mode is vector search alone, which is
             // exactly what misses codes and policy numbers. The leak and decline checks still apply.
             foreach (var expected in goldenCase.IsExactTerm && !HasKeywordSearch ? [] : goldenCase.Expected)

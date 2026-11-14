@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Chapter 9: PriorAuthBot's evaluation suite. See Program.cs for how to run it.
+    It measures retrieval on the golden set, checks every permission case for leaks, scores a sample
+    of answers with LLM judges (Ollama or Azure OpenAI), writes Markdown and HTML reports, and exits
+    with 1 when a metric falls below eval/baselines.json or anything leaks.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Evaluation" />
+    <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Quality" />
+    <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Reporting" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PriorAuthBot.Core\PriorAuthBot.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PriorAuthBot.Tests" />
+  </ItemGroup>
+</Project>
