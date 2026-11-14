@@ -46,6 +46,28 @@ public sealed class McpVettingTests : IAsyncDisposable
     }
 
     [Fact]
+    public void AStdioServerGetsOnlyAMinimalEnvironment()
+    {
+        // PriorAuthBot's environment can hold keys and connection strings. A server gets what a
+        // process needs to start, and only the extra names its entry lists.
+        Environment.SetEnvironmentVariable("PRIORAUTHBOT_TEST_SECRET", "do-not-forward");
+        Environment.SetEnvironmentVariable("PRIORAUTHBOT_TEST_FORWARDED", "forwarded");
+        try
+        {
+            var environment = McpToolProvider.MinimalEnvironment(new McpServerEntry { ForwardEnvironment = ["PRIORAUTHBOT_TEST_FORWARDED"] });
+
+            Assert.Contains(environment.Keys, k => k.Equals("PATH", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain("PRIORAUTHBOT_TEST_SECRET", environment.Keys);
+            Assert.Equal("forwarded", environment["PRIORAUTHBOT_TEST_FORWARDED"]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PRIORAUTHBOT_TEST_SECRET", null);
+            Environment.SetEnvironmentVariable("PRIORAUTHBOT_TEST_FORWARDED", null);
+        }
+    }
+
+    [Fact]
     public async Task AToolWhoseDescriptionChangedIsDropped()
     {
         // A "rug pull": the server was vetted, then changed what its tool says.

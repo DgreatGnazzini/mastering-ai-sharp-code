@@ -130,8 +130,10 @@ public sealed partial class McpToolProvider(
                 Arguments = server.Arguments,
                 WorkingDirectory = server.WorkingDirectory,
 
-                // A local server gets none of PriorAuthBot's environment, so none of its secrets.
+                // A local server gets none of PriorAuthBot's environment, so none of its secrets:
+                // only what a process needs to start, and the variables this entry names.
                 InheritEnvironmentVariables = false,
+                EnvironmentVariables = MinimalEnvironment(server),
             }, loggers),
             "Http" => new HttpClientTransport(new HttpClientTransportOptions
             {
@@ -145,6 +147,25 @@ public sealed partial class McpToolProvider(
         {
             ClientInfo = new() { Name = "priorauthbot", Version = PriorAuthBotInfo.Current.Chapter },
         }, loggers, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The MCP SDK's default set (PATH, HOME, and on Windows SYSTEMROOT and the other system
+    /// directories, without which a process cannot start), plus the variables the entry names.
+    /// </summary>
+    public static Dictionary<string, string?> MinimalEnvironment(McpServerEntry server)
+    {
+        ArgumentNullException.ThrowIfNull(server);
+        var environment = StdioClientTransportOptions.GetDefaultEnvironmentVariables();
+        foreach (var name in server.ForwardEnvironment)
+        {
+            if (Environment.GetEnvironmentVariable(name) is { } value)
+            {
+                environment[name] = value;
+            }
+        }
+
+        return environment;
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "MCP server {Server} could not be started; its tools are unavailable.")]

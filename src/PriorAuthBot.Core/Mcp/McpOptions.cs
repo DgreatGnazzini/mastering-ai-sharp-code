@@ -23,6 +23,14 @@ public sealed class McpServerEntry
 
     public List<string> Arguments { get; set; } = [];
 
+    /// <summary>
+    /// For stdio: the names of extra environment variables to pass to the server, such as
+    /// <c>DOTNET_ROOT</c>. The server otherwise gets only the MCP SDK's minimal set (PATH, HOME, and
+    /// the system directories), never PriorAuthBot's whole environment. List names, not values, and
+    /// never a variable that holds a secret.
+    /// </summary>
+    public List<string> ForwardEnvironment { get; set; } = [];
+
     /// <summary>For stdio: where the process starts. The API sets it to its content root when it is empty.</summary>
     public string? WorkingDirectory { get; set; }
 

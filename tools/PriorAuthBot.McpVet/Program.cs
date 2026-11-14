@@ -19,6 +19,7 @@ await using var client = await McpClient.CreateAsync(new StdioClientTransport(ne
     Command = args[0],
     Arguments = args[1..],
     InheritEnvironmentVariables = false,
+    EnvironmentVariables = McpToolProvider.MinimalEnvironment(new McpServerEntry { ForwardEnvironment = ["DOTNET_ROOT"] }),
 }));
 
 var info = client.ServerInfo;
