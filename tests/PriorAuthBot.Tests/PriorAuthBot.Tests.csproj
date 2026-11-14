@@ -10,10 +10,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Extensions.AI.Evaluation" />
     <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Quality" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\PriorAuthBot.Core\PriorAuthBot.Core.csproj" />
     <ProjectReference Include="..\..\src\PriorAuthBot.Api\PriorAuthBot.Api.csproj" />
+    <ProjectReference Include="..\..\eval\PriorAuthBot.Eval\PriorAuthBot.Eval.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GoldenSet\*.json" CopyToOutputDirectory="PreserveNewest" />

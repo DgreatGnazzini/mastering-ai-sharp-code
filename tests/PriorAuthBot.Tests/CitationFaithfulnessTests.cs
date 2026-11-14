@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.AI.Evaluation;
-using PriorAuthBot.Tests.Evaluation;
+using PriorAuthBot.Eval;
 using PriorAuthBot.Tests.Infrastructure;
 using Xunit;
 

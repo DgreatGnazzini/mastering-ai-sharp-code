@@ -1,0 +1,116 @@
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI.Evaluation;
+using Microsoft.Extensions.AI.Evaluation.Reporting;
+using Microsoft.Extensions.AI.Evaluation.Reporting.Formats.Html;
+using Microsoft.Extensions.AI.Evaluation.Reporting.Storage;
+
+namespace PriorAuthBot.Eval;
+
+/// <summary>
+/// PriorAuthBot's evaluation suite (chapter 9):
+///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Offline            retrieval and leak checks, no model
+///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Offline --answers  plus every answer, from the offline client
+///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Ollama --answers   plus LLM judges on the judged sample
+/// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
+/// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
+/// </summary>
+internal static class EvalProgram
+{
+    public static async Task<int> Main(string[] args)
+    {
+        var settings = EvalSettings.Parse(args);
+        var set = GoldenSet.Load();
+        var leaks = await LeakageChecker.ForSamplesAsync();
+        Directory.CreateDirectory(settings.ReportDirectory);
+        var cache = settings.Provider == EvalSettings.Ollama ? new FileDistributedCache(Path.Combine(settings.CacheDirectory, "app")) : null;
+        Console.WriteLine($"Golden set: {set.Cases.Count} questions, {set.Cases.Count(c => c.IsPermissionCase)} permission cases. Provider: {settings.Provider}.");
+
+        // 1. Retrieval, chapter 7 against chapter 8, on every question.
+        var runs = new List<RetrievalRun>();
+        foreach (var configuration in RetrievalConfiguration.Comparison(EvalSettings.RerankerModel))
+        {
+            var config = settings.Configuration(set);
+            foreach (var (key, value) in configuration.Settings)
+            {
+                config[key] = value;
+            }
+
+            await using var host = EvalHost.Create(config, cache);
+            await host.IngestSamplesAsync();
+            var run = await RetrievalEvaluation.RunAsync(configuration, host, set);
+            runs.Add(run);
+            Console.WriteLine($"{configuration.Name}: {run.Elapsed.TotalSeconds:0.0} s");
+        }
+
+        var retrievalReport = Reports.Retrieval(settings.Provider, set, runs);
+        await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-retrieval-{settings.Provider.ToLowerInvariant()}.md"), retrievalReport);
+        Console.WriteLine(retrievalReport);
+
+        // 2. Answers, from the shipped configuration (hybrid, chapter 8).
+        AnswerSummary? answerSummary = null;
+        if (settings.Answers)
+        {
+            await using var host = EvalHost.Create(settings.Configuration(set), cache);
+            await host.IngestSamplesAsync();
+
+            ReportingConfiguration? judged = null;
+            OllamaSharp.OllamaApiClient? judgeClient = null;
+            var cases = set.Cases.AsEnumerable();
+            if (settings.Provider == EvalSettings.Ollama)
+            {
+                // Every permission case (a decline costs no model call) and the judged sample. The other
+                // answerable questions are measured by retrieval: a model call each would double the job's time.
+                cases = cases.Where(c => c.IsPermissionCase || c.ExpectDecline || c.AnswerEval);
+                judgeClient = new OllamaSharp.OllamaApiClient(
+                    new HttpClient { BaseAddress = new Uri(EvalSettings.OllamaEndpoint!), Timeout = TimeSpan.FromMinutes(10) }, EvalSettings.JudgeModel);
+                judged = DiskBasedReportingConfiguration.Create(
+                    storageRootPath: Path.Combine(settings.CacheDirectory, "aieval"),
+                    evaluators: AnswerEvaluation.Evaluators(),
+                    chatConfiguration: new ChatConfiguration(judgeClient),
+                    enableResponseCaching: true,
+                    executionName: settings.ExecutionName,
+                    tags: [$"chat:{EvalSettings.ChatModel}", $"judge:{EvalSettings.JudgeModel}"]);
+            }
+
+            var answers = await AnswerEvaluation.RunAsync(host, set, cases.ToList(), leaks, judged, Console.WriteLine);
+            answerSummary = AnswerSummary.Of(answers);
+            var answerReport = Reports.Answers(settings.Provider, judged is null ? null : EvalSettings.JudgeModel, answers);
+            await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-answers-{settings.Provider.ToLowerInvariant()}.md"), answerReport);
+            Console.WriteLine(answerReport);
+
+            if (judged is not null)
+            {
+                // The HTML report: every judged answer with its scores, the judges' reasons, and the prompt.
+                var store = new DiskBasedResultStore(Path.Combine(settings.CacheDirectory, "aieval"));
+                var results = new List<ScenarioRunResult>();
+                await foreach (var result in store.ReadResultsAsync(settings.ExecutionName))
+                {
+                    results.Add(result);
+                }
+
+                await new HtmlReportWriter(Path.Combine(settings.ReportDirectory, "eval-answers.html")).WriteReportAsync(results);
+                Console.WriteLine($"HTML report: {results.Count} scored answers in eval-answers.html.");
+            }
+
+            judgeClient?.Dispose();
+        }
+
+        if (cache is not null)
+        {
+            Console.WriteLine($"Answer and embedding cache: {cache.Hits} hits, {cache.Misses} misses.");
+        }
+
+        // 3. The regression gate, on the shipped configuration.
+        if (!settings.Gate)
+        {
+            return 0;
+        }
+
+        var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
+        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary);
+        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary));
+        await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
+        Console.WriteLine(gateReport);
+        return gate.Ok ? 0 : 1;
+    }
+}

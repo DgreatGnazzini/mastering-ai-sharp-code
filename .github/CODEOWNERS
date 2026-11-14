@@ -2,3 +2,8 @@
 # Replace the owner with your own team, such as @your-org/ai-prompt-owners.
 /src/PriorAuthBot.Core/Prompts/ @DgreatGnazzini
 /tests/PriorAuthBot.Tests/Snapshots/ @DgreatGnazzini
+
+# The eval bar and the golden set (chapter 9): a change here moves the bar for every later pull
+# request, so it needs the same review as a prompt change.
+/eval/baselines.json @DgreatGnazzini
+/eval/datasets/ @DgreatGnazzini

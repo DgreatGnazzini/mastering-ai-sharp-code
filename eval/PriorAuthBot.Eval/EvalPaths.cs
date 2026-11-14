@@ -1,0 +1,29 @@
+namespace PriorAuthBot.Eval;
+
+/// <summary>Files the evaluation reads, found from the repository root so it runs from any folder.</summary>
+internal static class EvalPaths
+{
+    public static string RepoRoot { get; } = FindRepoRoot();
+
+    public static string GoldenSet => Path.Combine(RepoRoot, "eval", "datasets", "golden-set.json");
+
+    public static string Baselines => Path.Combine(RepoRoot, "eval", "baselines.json");
+
+    public static string SampleDocuments => Path.Combine(RepoRoot, "samples", "documents");
+
+    private static string FindRepoRoot()
+    {
+        foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
+        {
+            for (var directory = new DirectoryInfo(start); directory is not null; directory = directory.Parent)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "MasteringAI.slnx")))
+                {
+                    return directory.FullName;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("Could not find MasteringAI.slnx above the eval output folder or the current folder.");
+    }
+}

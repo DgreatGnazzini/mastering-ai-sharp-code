@@ -14,8 +14,6 @@ internal static class TestPaths
 
     public static string CatalogQueries => Path.Combine(AppContext.BaseDirectory, "Catalog", "catalog-queries.json");
 
-    public static string GoldenSet => Path.Combine(AppContext.BaseDirectory, "GoldenSet", "golden-set.json");
-
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -1,0 +1,31 @@
+{
+  "description": "Accepted numbers for PriorAuthBot's shipped configuration (hybrid retrieval), per provider. The eval fails a run that falls more than the tolerance below these. Changes need a CODEOWNERS review. Leaks are not here: any leak fails the run.",
+  "tolerance": {
+    "retrieval": 0.02,
+    "judgeScore": 0.5,
+    "share": 0.1
+  },
+  "providers": {
+    "Offline": {
+      "retrieval": {
+        "recallAtTop": 0.95,
+        "mrr": 0.95,
+        "declinesKept": 0.96
+      }
+    },
+    "Ollama": {
+      "retrieval": {
+        "recallAtTop": 0.97,
+        "mrr": 0.97,
+        "declinesKept": 0.83
+      },
+      "answers": {
+        "Relevance": 3.89,
+        "Groundedness": 4.55,
+        "Completeness": 3.68,
+        "Citation faithfulness": 0.78,
+        "Contains expected fact": 0.79
+      }
+    }
+  }
+}

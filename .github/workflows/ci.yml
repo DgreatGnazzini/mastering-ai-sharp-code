@@ -45,6 +45,20 @@ jobs:
         # Tests that call a real model are marked [Trait("Category", "Live")] and are skipped in CI.
         run: dotnet test --solution MasteringAI.slnx --configuration Release --no-build
 
+      - name: Eval gate, offline (chapter 9)
+        # Retrieval on all 105 golden questions, chapter 7 against chapter 8, the leak checks on
+        # every retrieval, prompt, and answer, and the gate against eval/baselines.json.
+        if: matrix.os == 'ubuntu-latest'
+        run: >-
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release --no-build
+          -- --provider Offline --answers --out eval-reports
+
+      - name: Add the eval reports to the job summary
+        if: always() && matrix.os == 'ubuntu-latest'
+        run: |
+          cat eval-reports/*.md || true
+          cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
       - name: Check for vulnerable packages
         if: matrix.os == 'ubuntu-latest'
         shell: bash
@@ -57,21 +71,12 @@ jobs:
   pgvector:
     name: Integration (PostgreSQL + pgvector)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:0.8.7-pg17-trixie
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: priorauthbot_test
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 10
+    # Chapter 9: the tests start pgvector themselves with Testcontainers (the runner has Docker), so
+    # the same command works on a laptop: PRIORAUTHBOT_TEST_TESTCONTAINERS=true dotnet test ...
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
-      PRIORAUTHBOT_TEST_POSTGRES: Host=localhost;Port=5432;Database=priorauthbot_test;Username=postgres;Password=postgres
+      PRIORAUTHBOT_TEST_TESTCONTAINERS: true
       PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
     steps:
       - uses: actions/checkout@v5
@@ -79,9 +84,6 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-
-      - name: Create the vector extension
-        run: PGPASSWORD=postgres psql -h localhost -U postgres -d priorauthbot_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
       - name: Test against pgvector
         run: >-
@@ -146,10 +148,12 @@ jobs:
     # classification questions.
     # Chapter 8: hybrid search, reranking (a local cross-encoder and the LLM), query rewriting, and
     # citation faithfulness.
-    # CPU only, so it takes several minutes.
+    # Chapter 9: the eval project, with LLM judges on a sample of answers, a response cache carried
+    # between runs, an HTML report, and the regression gate. The golden set check moved there.
+    # CPU only, so it takes a long time.
     name: RAG eval (golden set on Ollama)
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -195,7 +199,29 @@ jobs:
           df -h /
           free -h
 
-      - name: Run the golden set and the groundedness check
+      # Answers, embeddings, and judge replies from earlier runs. An entry is keyed by its exact
+      # request, so a changed prompt or model simply misses; restoring the newest cache is always safe.
+      - name: Restore the eval cache (chapter 9)
+        uses: actions/cache/restore@v4
+        with:
+          path: .eval-cache
+          key: eval-cache-${{ github.run_id }}
+          restore-keys: eval-cache-
+
+      - name: Eval suite with LLM judges and the regression gate (chapter 9)
+        run: >-
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release
+          -- --provider Ollama --answers --execution ${{ github.sha }}
+
+      - name: Save the eval cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .eval-cache
+          key: eval-cache-${{ github.run_id }}
+
+      - name: Chunking experiment (chapter 7)
+        if: always()
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveRagTests" --output Detailed

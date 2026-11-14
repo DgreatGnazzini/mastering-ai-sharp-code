@@ -1,0 +1,1412 @@
+{
+  "description": "The PriorAuthBot golden set over samples/documents (synthetic, no real PHI). Chapter 7 wrote 20 questions, chapter 8 added 4 exact-term questions, and chapter 9 grows it to 105. kind is fact, exact-term, permission, or out-of-scope; chapter is the chapter that added the case. expectedDocuments must be retrieved; mustNotSee documents must never be retrieved for that user; expectDecline means PriorAuthBot must say it does not know; answerMustContain and answerMustNotContain are checked on the live answer; expectedAnswer is the ground truth for the completeness judge; answerEval marks the sample whose answers are scored by the LLM judges in CI.",
+  "offline": {
+    "minScore": 0.25
+  },
+  "ollama": {
+    "minScore": 0.6
+  },
+  "users": {
+    "nurse": [
+      "AllStaff",
+      "Clinical"
+    ],
+    "contractor": [
+      "Contractors"
+    ],
+    "claims": [
+      "AllStaff",
+      "Claims"
+    ],
+    "hr": [
+      "AllStaff",
+      "HR"
+    ],
+    "compliance": [
+      "AllStaff",
+      "Compliance"
+    ],
+    "staff": [
+      "AllStaff"
+    ]
+  },
+  "cases": [
+    {
+      "id": "gs01-sepsis-escalation",
+      "user": "nurse",
+      "question": "When must a positive sepsis screen be escalated to a physician?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "answerMustContain": [
+        "15 minutes"
+      ],
+      "expectedAnswer": "A positive sepsis screen must be escalated to the supervising physician within 15 minutes.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs02-sepsis-contractor",
+      "user": "contractor",
+      "question": "When must a positive sepsis screen be escalated to a physician?",
+      "mustNotSee": [
+        "sepsis-screening-protocol"
+      ],
+      "expectDecline": true,
+      "chapter": 7,
+      "kind": "permission"
+    },
+    {
+      "id": "gs03-mri-criteria-nurse",
+      "user": "nurse",
+      "question": "What are the prior authorization criteria for a lumbar spine MRI?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "six weeks"
+      ],
+      "expectedAnswer": "A lumbar spine MRI is approved when low back pain has lasted at least six weeks without improving with conservative treatment, or when a red flag symptom is documented, in which case no waiting period applies.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs04-mri-turnaround-claims",
+      "user": "claims",
+      "question": "How long does a standard prior authorization request for a lumbar MRI take to decide?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "5 business days"
+      ],
+      "expectedAnswer": "Standard requests are decided within 5 business days.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs05-mri-contractor",
+      "user": "contractor",
+      "question": "What are the prior authorization criteria for a lumbar spine MRI?",
+      "mustNotSee": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectDecline": true,
+      "chapter": 7,
+      "kind": "permission"
+    },
+    {
+      "id": "gs06-remote-nurse",
+      "user": "nurse",
+      "question": "Can I work remotely?",
+      "expectedDocuments": [
+        "remote-work-policy"
+      ],
+      "mustNotSee": [
+        "contractor-handbook"
+      ],
+      "answerMustContain": [
+        "three days"
+      ],
+      "expectedAnswer": "Employees in hybrid-eligible roles may work remotely up to three days a week after their 90-day introductory period; clinical staff who see members in person cannot work remotely on scheduled clinic days.",
+      "chapter": 7,
+      "kind": "permission",
+      "answerEval": true
+    },
+    {
+      "id": "gs07-remote-contractor",
+      "user": "contractor",
+      "question": "Can I work remotely?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "mustNotSee": [
+        "remote-work-policy"
+      ],
+      "answerMustContain": [
+        "statement of work"
+      ],
+      "expectedAnswer": "Contractors work on site unless their statement of work allows remote work, and remote work needs written approval from the sponsoring manager and the vendor management office.",
+      "chapter": 7,
+      "kind": "permission",
+      "answerEval": true
+    },
+    {
+      "id": "gs08-pto-carryover",
+      "user": "hr",
+      "question": "How many hours of PTO can I carry over into next year?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "40 hours"
+      ],
+      "expectedAnswer": "You may carry over up to 40 hours of unused PTO into the next calendar year.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs09-pto-contractor",
+      "user": "contractor",
+      "question": "How much paid time off do I get?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "mustNotSee": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "not accrue"
+      ],
+      "expectedAnswer": "Contractors do not accrue paid time off from Deductible Dynamics; time off is arranged with the staffing agency.",
+      "chapter": 7,
+      "kind": "permission",
+      "answerEval": true
+    },
+    {
+      "id": "gs10-appeal-deadline",
+      "user": "claims",
+      "question": "What is the deadline for a member to appeal a denied claim?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "answerMustContain": [
+        "180 days"
+      ],
+      "expectedAnswer": "Members may appeal a denied claim within 180 days of the date on the denial notice.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs11-appeal-nurse",
+      "user": "nurse",
+      "question": "What is the deadline for a member to appeal a denied claim?",
+      "mustNotSee": [
+        "claims-appeals-procedure"
+      ],
+      "expectDecline": true,
+      "chapter": 7,
+      "kind": "permission"
+    },
+    {
+      "id": "gs12-investigation-hr",
+      "user": "hr",
+      "question": "How soon does the HR investigator contact the person who made a harassment complaint?",
+      "expectedDocuments": [
+        "workplace-investigations"
+      ],
+      "answerMustContain": [
+        "2 business days"
+      ],
+      "expectedAnswer": "The assigned HR investigator contacts the person who complained within 2 business days.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs13-cafeteria",
+      "user": "nurse",
+      "question": "What is on the cafeteria lunch menu this Friday?",
+      "expectDecline": true,
+      "chapter": 7,
+      "kind": "out-of-scope"
+    },
+    {
+      "id": "gs14-breach-notification",
+      "user": "compliance",
+      "question": "How many days do we have to notify members after a HIPAA breach?",
+      "expectedDocuments": [
+        "breach-risk-assessment"
+      ],
+      "answerMustContain": [
+        "60"
+      ],
+      "expectedAnswer": "Affected members must be notified without unreasonable delay and no later than 60 calendar days after discovery.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs15-breach-claims",
+      "user": "claims",
+      "question": "How many days do we have to notify members after a HIPAA breach?",
+      "mustNotSee": [
+        "breach-risk-assessment",
+        "incident-2026-031"
+      ],
+      "chapter": 7,
+      "kind": "permission"
+    },
+    {
+      "id": "gs16-report-incident",
+      "user": "nurse",
+      "question": "How do I report a privacy incident?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "answerMustContain": [
+        "24 hours"
+      ],
+      "expectedAnswer": "Report it to the Privacy Office within 24 hours, using the privacy incident form on the intranet or the privacy hotline at extension 4321.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs17-lost-laptop",
+      "user": "contractor",
+      "question": "What should I do if my laptop is lost or stolen?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "answerMustContain": [
+        "one hour"
+      ],
+      "expectedAnswer": "Report it to the IT service desk within one hour, at extension 5000 or through the service desk portal; IT wipes the device remotely.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs18-incident-compliance",
+      "user": "compliance",
+      "question": "What was the outcome of privacy incident 2026-031?",
+      "expectedDocuments": [
+        "incident-2026-031"
+      ],
+      "answerMustContain": [
+        "not a reportable breach"
+      ],
+      "expectedAnswer": "Incident 2026-031 was assessed as a low probability of compromise and was not a reportable breach.",
+      "chapter": 7,
+      "kind": "fact",
+      "answerEval": true
+    },
+    {
+      "id": "gs19-member-phi-claims",
+      "user": "claims",
+      "question": "What happened with the misdirected letter for member Jordan Avery?",
+      "mustNotSee": [
+        "incident-2026-031"
+      ],
+      "chapter": 7,
+      "kind": "permission"
+    },
+    {
+      "id": "gs20-unacl-draft",
+      "user": "hr",
+      "question": "What does the draft workforce reduction plan say about the Eastside claims team?",
+      "mustNotSee": [
+        "draft-layoff-plan"
+      ],
+      "expectDecline": true,
+      "chapter": 7,
+      "kind": "permission"
+    },
+    {
+      "id": "gs21-cpt-code-claims",
+      "user": "claims",
+      "question": "Does CPT 72148 need prior authorization?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "six weeks"
+      ],
+      "kind": "exact-term",
+      "expectedAnswer": "Yes. CPT 72148 is covered by the lumbar spine MRI criteria: six weeks of back pain without improvement after conservative treatment, or a red flag.",
+      "chapter": 8,
+      "answerEval": true
+    },
+    {
+      "id": "gs22-cpt-code-contractor",
+      "user": "contractor",
+      "question": "Does CPT 72148 need prior authorization?",
+      "mustNotSee": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectDecline": true,
+      "kind": "permission",
+      "chapter": 8
+    },
+    {
+      "id": "gs23-policy-number-hr",
+      "user": "hr",
+      "question": "What does HR-104 say about carryover?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "40 hours"
+      ],
+      "kind": "exact-term",
+      "expectedAnswer": "HR-104 lets you carry over up to 40 hours of unused PTO; hours above 40 are forfeited on December 31 unless an exception was approved.",
+      "chapter": 8,
+      "answerEval": true
+    },
+    {
+      "id": "gs24-policy-number-claims",
+      "user": "claims",
+      "question": "What is CLM-620 about?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "kind": "exact-term",
+      "expectedAnswer": "CLM-620 is the Claims Appeals Procedure: filing deadlines, review timelines, who reviews an appeal, and external review.",
+      "chapter": 8
+    },
+    {
+      "id": "gs25-gift-limit-contractor",
+      "user": "contractor",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What is the limit on gifts I can accept from a vendor?",
+      "expectedDocuments": [
+        "code-of-conduct"
+      ],
+      "answerMustContain": [
+        "75"
+      ],
+      "expectedAnswer": "You may accept a vendor gift only if it is worth 75 dollars or less and is not cash or a cash equivalent such as a gift card.",
+      "answerEval": true
+    },
+    {
+      "id": "gs26-gift-from-member",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Can I accept a gift from a member?",
+      "expectedDocuments": [
+        "code-of-conduct"
+      ],
+      "expectedAnswer": "No. Gifts from members are never allowed."
+    },
+    {
+      "id": "gs27-gift-report-deadline",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long do I have to report a gift worth more than 75 dollars?",
+      "expectedDocuments": [
+        "code-of-conduct"
+      ],
+      "answerMustContain": [
+        "five business days"
+      ],
+      "expectedAnswer": "Report it to the Compliance team within five business days, using the gift disclosure form."
+    },
+    {
+      "id": "gs28-ethics-hotline",
+      "user": "staff",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What is the extension for the anonymous ethics hotline?",
+      "expectedDocuments": [
+        "code-of-conduct"
+      ],
+      "answerMustContain": [
+        "4040"
+      ],
+      "expectedAnswer": "The anonymous ethics hotline is at extension 4040."
+    },
+    {
+      "id": "gs29-conflict-disclosure",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When do I have to disclose a conflict of interest?",
+      "expectedDocuments": [
+        "code-of-conduct"
+      ],
+      "answerMustContain": [
+        "annual"
+      ],
+      "expectedAnswer": "Before you take part in a decision that involves the provider, vendor, or competitor; disclosures are made once a year in the annual attestation and whenever a new conflict arises."
+    },
+    {
+      "id": "gs30-gen001",
+      "user": "claims",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What is GEN-001?",
+      "expectedDocuments": [
+        "code-of-conduct"
+      ],
+      "expectedAnswer": "GEN-001 is the Code of Conduct, which covers gifts, conflicts of interest, and speaking up."
+    },
+    {
+      "id": "gs31-password-length",
+      "user": "contractor",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long does my password have to be?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "answerMustContain": [
+        "14"
+      ],
+      "expectedAnswer": "Passwords must be at least 14 characters long.",
+      "answerEval": true
+    },
+    {
+      "id": "gs32-mfa-vpn",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Do I need multi-factor authentication for the VPN?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "expectedAnswer": "Yes. Multi-factor authentication is required for every account, including the VPN."
+    },
+    {
+      "id": "gs33-public-chatbot",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Can I paste claims data into a public AI chatbot?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "expectedAnswer": "No. Never paste member information, claims data, or PHI into a public AI chatbot; only PriorAuthBot and approved tools may be used."
+    },
+    {
+      "id": "gs34-lost-phone-extension",
+      "user": "staff",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What extension do I call to report a lost phone?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "answerMustContain": [
+        "5000"
+      ],
+      "expectedAnswer": "Call the IT service desk at extension 5000, within one hour of noticing the phone is missing."
+    },
+    {
+      "id": "gs35-usb-drive",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Can I plug my own USB drive into my work laptop?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "expectedAnswer": "No. Do not connect personal storage devices to company devices."
+    },
+    {
+      "id": "gs36-it210",
+      "user": "staff",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What does IT-210 say about approved AI tools?",
+      "expectedDocuments": [
+        "it-acceptable-use"
+      ],
+      "answerMustContain": [
+        "PriorAuthBot"
+      ],
+      "expectedAnswer": "Only PriorAuthBot and the AI tools on the approved software list may be used with Deductible Dynamics data."
+    },
+    {
+      "id": "gs37-wrong-fax",
+      "user": "contractor",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "I faxed member records to the wrong number. What should I do?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "answerMustContain": [
+        "24 hours"
+      ],
+      "expectedAnswer": "Report it to the Privacy Office within 24 hours, using the privacy incident form or the privacy hotline at extension 4321, and do not investigate on your own or contact the member."
+    },
+    {
+      "id": "gs38-privacy-hotline",
+      "user": "staff",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What is the extension for the privacy hotline?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "answerMustContain": [
+        "4321"
+      ],
+      "expectedAnswer": "The privacy hotline is at extension 4321."
+    },
+    {
+      "id": "gs39-privacy-ack",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How quickly does the Privacy Office acknowledge an incident report?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "answerMustContain": [
+        "one business day"
+      ],
+      "expectedAnswer": "The Privacy Office acknowledges every report within one business day."
+    },
+    {
+      "id": "gs40-contact-member",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Should I contact the member after a privacy incident?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "expectedAnswer": "No. Report the incident and do not contact the member or investigate on your own."
+    },
+    {
+      "id": "gs41-cmp110",
+      "user": "compliance",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What is CMP-110?",
+      "expectedDocuments": [
+        "privacy-incident-reporting"
+      ],
+      "expectedAnswer": "CMP-110 is How to Report a Privacy Incident."
+    },
+    {
+      "id": "gs42-badge-expiry",
+      "user": "contractor",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When does my contractor badge expire?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "answerMustContain": [
+        "statement of work"
+      ],
+      "expectedAnswer": "Contractor badges expire at the end date in the statement of work."
+    },
+    {
+      "id": "gs43-contractor-notice",
+      "user": "contractor",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How much notice do I give my sponsoring manager before taking time off?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "answerMustContain": [
+        "two weeks"
+      ],
+      "expectedAnswer": "Tell your sponsoring manager at least two weeks in advance, and arrange the time off with your staffing agency."
+    },
+    {
+      "id": "gs44-remote-policy-contractors",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Does the employee remote work policy apply to contractors?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "expectedAnswer": "No. Contractors follow their statement of work and need written approval from the sponsoring manager and the vendor management office."
+    },
+    {
+      "id": "gs45-contractor-records-staff",
+      "user": "staff",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "Can contractors get access to member records?",
+      "mustNotSee": [
+        "contractor-handbook"
+      ]
+    },
+    {
+      "id": "gs46-hr300",
+      "user": "contractor",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What is HR-300?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "expectedAnswer": "HR-300 is the Contractor Handbook."
+    },
+    {
+      "id": "gs47-pto-five-years",
+      "user": "staff",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How much PTO do I get after five years of service?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "25 days"
+      ],
+      "expectedAnswer": "With 3 to 9 years of service, full-time employees accrue 7.69 hours per pay period, or 25 days a year.",
+      "answerEval": true
+    },
+    {
+      "id": "gs48-pto-new-hire",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How many hours of PTO per pay period does a new employee accrue?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "6.15"
+      ],
+      "expectedAnswer": "Less than 3 years of service: 6.15 hours per pay period, or 20 days a year."
+    },
+    {
+      "id": "gs49-pto-week-notice",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How far in advance do I need to request a week off?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "two weeks"
+      ],
+      "expectedAnswer": "Request PTO at least two weeks in advance for absences of three days or more."
+    },
+    {
+      "id": "gs50-pto-payout",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Is unused PTO paid out when someone leaves?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "40"
+      ],
+      "expectedAnswer": "Yes, unused accrued PTO up to the 40-hour carryover limit is paid out in the final paycheck."
+    },
+    {
+      "id": "gs51-pto-forfeit",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When are PTO hours above the carryover limit forfeited?",
+      "expectedDocuments": [
+        "pto-policy"
+      ],
+      "answerMustContain": [
+        "December 31"
+      ],
+      "expectedAnswer": "Hours above 40 are forfeited on December 31 unless a manager approved an exception in writing before December 1."
+    },
+    {
+      "id": "gs52-pto-carryover-contractor",
+      "user": "contractor",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "How many hours of PTO can I carry over into next year?",
+      "expectedDocuments": [
+        "contractor-handbook"
+      ],
+      "mustNotSee": [
+        "pto-policy"
+      ],
+      "answerMustNotContain": [
+        "40 hours"
+      ],
+      "expectedAnswer": "Contractors do not accrue paid time off from Deductible Dynamics."
+    },
+    {
+      "id": "gs53-stipend",
+      "user": "staff",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How much is the home office stipend?",
+      "expectedDocuments": [
+        "remote-work-policy"
+      ],
+      "answerMustContain": [
+        "300"
+      ],
+      "expectedAnswer": "Hybrid employees receive a one-time home office stipend of 300 dollars, claimed within 60 days of their remote work start date."
+    },
+    {
+      "id": "gs54-print-at-home",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Can I print member information when I work from home?",
+      "expectedDocuments": [
+        "remote-work-policy"
+      ],
+      "expectedAnswer": "No. Protected health information may not be printed at home."
+    },
+    {
+      "id": "gs55-clinic-days",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Can I work from home on my scheduled clinic days?",
+      "expectedDocuments": [
+        "remote-work-policy"
+      ],
+      "expectedAnswer": "No. Clinical staff who see members in person are not eligible for remote work on scheduled clinic days."
+    },
+    {
+      "id": "gs56-new-hire-remote",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When can a new hire start working remotely?",
+      "expectedDocuments": [
+        "remote-work-policy"
+      ],
+      "answerMustContain": [
+        "90"
+      ],
+      "expectedAnswer": "After completing the 90-day introductory period, in a hybrid-eligible role."
+    },
+    {
+      "id": "gs57-stipend-contractor",
+      "user": "contractor",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "How much is the home office stipend?",
+      "mustNotSee": [
+        "remote-work-policy",
+        "expense-reimbursement"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "300"
+      ]
+    },
+    {
+      "id": "gs58-mileage",
+      "user": "staff",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What is the mileage reimbursement rate?",
+      "expectedDocuments": [
+        "expense-reimbursement"
+      ],
+      "answerMustContain": [
+        "70 cents"
+      ],
+      "expectedAnswer": "Business travel in a personal vehicle is reimbursed at 70 cents per mile."
+    },
+    {
+      "id": "gs59-alcohol",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Is alcohol reimbursed on business trips?",
+      "expectedDocuments": [
+        "expense-reimbursement"
+      ],
+      "expectedAnswer": "No. Alcohol is never reimbursed."
+    },
+    {
+      "id": "gs60-meal-limit",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What is the daily meal limit when I travel for work?",
+      "expectedDocuments": [
+        "expense-reimbursement"
+      ],
+      "answerMustContain": [
+        "75"
+      ],
+      "expectedAnswer": "Meals during approved business travel are reimbursed up to 75 dollars per day."
+    },
+    {
+      "id": "gs61-itemized-receipt",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When do I need an itemized receipt for an expense?",
+      "expectedDocuments": [
+        "expense-reimbursement"
+      ],
+      "answerMustContain": [
+        "25"
+      ],
+      "expectedAnswer": "For any expense over 25 dollars."
+    },
+    {
+      "id": "gs62-late-expense",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What happens if I submit an expense after 90 days?",
+      "expectedDocuments": [
+        "expense-reimbursement"
+      ],
+      "expectedAnswer": "Expenses submitted after 90 days are not reimbursed."
+    },
+    {
+      "id": "gs63-fin220",
+      "user": "staff",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What does FIN-220 cover?",
+      "expectedDocuments": [
+        "expense-reimbursement"
+      ],
+      "expectedAnswer": "FIN-220 is the Expense Reimbursement Policy: submitting expenses, mileage, and meals."
+    },
+    {
+      "id": "gs64-mileage-contractor",
+      "user": "contractor",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "What is the mileage reimbursement rate?",
+      "mustNotSee": [
+        "expense-reimbursement"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "70 cents"
+      ]
+    },
+    {
+      "id": "gs65-sepsis-heart-rate",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What heart rate counts toward a positive sepsis screen?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "answerMustContain": [
+        "90"
+      ],
+      "expectedAnswer": "A heart rate above 90 beats per minute.",
+      "answerEval": true
+    },
+    {
+      "id": "gs66-cultures-antibiotics",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Should I draw blood cultures before starting antibiotics for suspected sepsis?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "answerMustContain": [
+        "45 minutes"
+      ],
+      "expectedAnswer": "Yes, draw a lactate level and blood cultures before antibiotics, unless that would delay antibiotics by more than 45 minutes."
+    },
+    {
+      "id": "gs67-sepsis-transfer",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When do I call emergency services for a patient with a positive sepsis screen?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "answerMustContain": [
+        "90 mmHg"
+      ],
+      "expectedAnswer": "If the systolic blood pressure stays below 90 mmHg after initial fluids."
+    },
+    {
+      "id": "gs68-sepsis-review",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Who reviews positive sepsis screens?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "answerMustContain": [
+        "clinical quality"
+      ],
+      "expectedAnswer": "The clinical quality team reviews positive screens weekly."
+    },
+    {
+      "id": "gs69-sepsis-temp-claims",
+      "user": "claims",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "What temperature makes a sepsis screen positive?",
+      "mustNotSee": [
+        "sepsis-screening-protocol"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "38.3"
+      ]
+    },
+    {
+      "id": "gs70-sepsis-hr",
+      "user": "hr",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "When must a positive sepsis screen be escalated?",
+      "mustNotSee": [
+        "sepsis-screening-protocol"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "15 minutes"
+      ]
+    },
+    {
+      "id": "gs71-cln410",
+      "user": "nurse",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What is CLN-410?",
+      "expectedDocuments": [
+        "sepsis-screening-protocol"
+      ],
+      "expectedAnswer": "CLN-410 is the Sepsis Screening Protocol."
+    },
+    {
+      "id": "gs72-medrec-discharge",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How soon after a hospital discharge do we reconcile medications?",
+      "expectedDocuments": [
+        "medication-reconciliation"
+      ],
+      "answerMustContain": [
+        "48 hours"
+      ],
+      "expectedAnswer": "Within 48 hours of the member's discharge."
+    },
+    {
+      "id": "gs73-high-alert",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Which medications need a second clinician to verify the reconciled list?",
+      "expectedDocuments": [
+        "medication-reconciliation"
+      ],
+      "answerMustContain": [
+        "insulin"
+      ],
+      "expectedAnswer": "Anticoagulants, insulin, and opioids."
+    },
+    {
+      "id": "gs74-medrec-sources",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How many sources do I need for a member's medication list?",
+      "expectedDocuments": [
+        "medication-reconciliation"
+      ],
+      "answerMustContain": [
+        "two"
+      ],
+      "expectedAnswer": "At least two sources, such as the member, the pharmacy claims history, and the discharge summary."
+    },
+    {
+      "id": "gs75-high-alert-contractor",
+      "user": "contractor",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "Which medications need a second clinician to verify the reconciled list?",
+      "mustNotSee": [
+        "medication-reconciliation"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "insulin"
+      ]
+    },
+    {
+      "id": "gs76-medrec-claims",
+      "user": "claims",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "How soon after a hospital discharge are medications reconciled?",
+      "mustNotSee": [
+        "medication-reconciliation"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "48 hours"
+      ]
+    },
+    {
+      "id": "gs77-mri-red-flags",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What are the red flags for a lumbar MRI request?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "bladder"
+      ],
+      "expectedAnswer": "New bowel or bladder dysfunction, saddle anesthesia, progressive leg weakness, a history of cancer, unexplained weight loss, fever with back pain, or significant trauma."
+    },
+    {
+      "id": "gs78-mri-urgent",
+      "user": "nurse",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How fast are urgent lumbar MRI requests decided?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "72 hours"
+      ],
+      "expectedAnswer": "Urgent requests, including any with a red flag, are decided within 72 hours."
+    },
+    {
+      "id": "gs79-peer-to-peer",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long does a provider have to request a peer-to-peer review after a lumbar MRI denial?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "answerMustContain": [
+        "14 days"
+      ],
+      "expectedAnswer": "Within 14 days of the denial."
+    },
+    {
+      "id": "gs80-cpt-72158",
+      "user": "claims",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "Do the lumbar MRI criteria cover CPT 72158?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectedAnswer": "Yes. CPT 72158 (without and then with contrast) is one of the three codes the criteria apply to."
+    },
+    {
+      "id": "gs81-um512",
+      "user": "nurse",
+      "kind": "exact-term",
+      "chapter": 9,
+      "question": "What does UM-512 cover?",
+      "expectedDocuments": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectedAnswer": "UM-512 is the prior authorization criteria for lumbar spine MRI."
+    },
+    {
+      "id": "gs82-cpt-code-staff",
+      "user": "staff",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "Does CPT 72148 need prior authorization?",
+      "mustNotSee": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs83-red-flags-hr",
+      "user": "hr",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "What are the red flags for a lumbar MRI request?",
+      "mustNotSee": [
+        "prior-auth-lumbar-mri"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "saddle"
+      ]
+    },
+    {
+      "id": "gs84-expedited-appeal",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long do we have to decide an expedited appeal?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "answerMustContain": [
+        "72 hours"
+      ],
+      "expectedAnswer": "Expedited appeals are decided within 72 hours."
+    },
+    {
+      "id": "gs85-appeal-reviewer",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Who is allowed to review an appeal?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "expectedAnswer": "Someone who was not involved in the original denial and does not report to the person who made it; appeals involving medical judgment go to a physician in the same or a similar specialty."
+    },
+    {
+      "id": "gs86-external-review",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long does a member have to request an external review?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "answerMustContain": [
+        "four"
+      ],
+      "expectedAnswer": "The denial letter explains the four-month deadline to request an external review."
+    },
+    {
+      "id": "gs87-appeal-received",
+      "user": "claims",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long does an appeal for services already received take to decide?",
+      "expectedDocuments": [
+        "claims-appeals-procedure"
+      ],
+      "answerMustContain": [
+        "60 days"
+      ],
+      "expectedAnswer": "Appeals for services already received are decided within 60 days."
+    },
+    {
+      "id": "gs88-appeal-staff",
+      "user": "staff",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "What is the deadline for a member to appeal a denied claim?",
+      "mustNotSee": [
+        "claims-appeals-procedure"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "180"
+      ]
+    },
+    {
+      "id": "gs89-clm620-contractor",
+      "user": "contractor",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "What is CLM-620 about?",
+      "mustNotSee": [
+        "claims-appeals-procedure"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs90-investigation-length",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long should a harassment investigation take?",
+      "expectedDocuments": [
+        "workplace-investigations"
+      ],
+      "answerMustContain": [
+        "30"
+      ],
+      "expectedAnswer": "The investigator aims to complete it within 30 calendar days."
+    },
+    {
+      "id": "gs91-investigation-extension",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Who approves an extension to a workplace investigation?",
+      "expectedDocuments": [
+        "workplace-investigations"
+      ],
+      "answerMustContain": [
+        "HR director"
+      ],
+      "expectedAnswer": "The HR director."
+    },
+    {
+      "id": "gs92-interview-notes",
+      "user": "hr",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "Where are investigation interview notes stored?",
+      "expectedDocuments": [
+        "workplace-investigations"
+      ],
+      "expectedAnswer": "In the restricted HR case system; interview notes are never stored in email."
+    },
+    {
+      "id": "gs93-investigation-nurse",
+      "user": "nurse",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "How long should a harassment investigation take?",
+      "mustNotSee": [
+        "workplace-investigations"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "30 calendar days"
+      ]
+    },
+    {
+      "id": "gs94-admin-leave-contractor",
+      "user": "contractor",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "Can HR put someone on paid administrative leave during an investigation?",
+      "mustNotSee": [
+        "workplace-investigations"
+      ],
+      "expectDecline": true
+    },
+    {
+      "id": "gs95-four-factors",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What are the four factors in a breach risk assessment?",
+      "expectedDocuments": [
+        "breach-risk-assessment"
+      ],
+      "expectedAnswer": "The nature and extent of the PHI, the unauthorized person, whether the information was actually acquired or viewed, and the extent of mitigation.",
+      "answerEval": true
+    },
+    {
+      "id": "gs96-assessment-retention",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "How long must breach risk assessments be kept?",
+      "expectedDocuments": [
+        "breach-risk-assessment"
+      ],
+      "answerMustContain": [
+        "six years"
+      ],
+      "expectedAnswer": "Six years, including those that conclude there was no breach."
+    },
+    {
+      "id": "gs97-media-notice",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When do we have to notify the media about a breach?",
+      "expectedDocuments": [
+        "breach-risk-assessment"
+      ],
+      "answerMustContain": [
+        "500"
+      ],
+      "expectedAnswer": "When a breach affects 500 or more residents of a state, within the same 60 days."
+    },
+    {
+      "id": "gs98-retention-nurse",
+      "user": "nurse",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "How long must breach risk assessments be kept?",
+      "mustNotSee": [
+        "breach-risk-assessment"
+      ],
+      "answerMustNotContain": [
+        "six years"
+      ]
+    },
+    {
+      "id": "gs99-letter-returned",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "When was the misdirected letter in incident 2026-031 returned?",
+      "expectedDocuments": [
+        "incident-2026-031"
+      ],
+      "answerMustContain": [
+        "October 20"
+      ],
+      "expectedAnswer": "The recipient returned it unopened on October 20, 2026."
+    },
+    {
+      "id": "gs100-member-dob-hr",
+      "user": "hr",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "What is the date of birth of member DD-48213977?",
+      "mustNotSee": [
+        "incident-2026-031"
+      ],
+      "expectDecline": true,
+      "answerMustNotContain": [
+        "1979"
+      ]
+    },
+    {
+      "id": "gs101-vendor-fix",
+      "user": "compliance",
+      "kind": "fact",
+      "chapter": 9,
+      "question": "What did the mailing vendor change after incident 2026-031?",
+      "expectedDocuments": [
+        "incident-2026-031"
+      ],
+      "answerMustContain": [
+        "address"
+      ],
+      "expectedAnswer": "The mailing vendor corrected the address-matching rule on October 22, 2026."
+    },
+    {
+      "id": "gs102-parking",
+      "user": "staff",
+      "kind": "out-of-scope",
+      "chapter": 9,
+      "question": "What is the visitor parking validation policy?",
+      "expectDecline": true
+    },
+    {
+      "id": "gs103-orthodontics",
+      "user": "claims",
+      "kind": "out-of-scope",
+      "chapter": 9,
+      "question": "Does the plan cover orthodontics for adults?",
+      "expectDecline": true
+    },
+    {
+      "id": "gs104-401k",
+      "user": "hr",
+      "kind": "out-of-scope",
+      "chapter": 9,
+      "question": "What is the company 401(k) match?",
+      "expectDecline": true
+    },
+    {
+      "id": "gs105-eastside-compliance",
+      "user": "compliance",
+      "kind": "permission",
+      "chapter": 9,
+      "question": "Is the Eastside claims team being consolidated?",
+      "mustNotSee": [
+        "draft-layoff-plan"
+      ],
+      "expectDecline": true
+    }
+  ]
+}
