@@ -38,6 +38,11 @@
       "tools": {
         "Tool selection": 0.8,
         "Tool arguments": 0.86
+      },
+      "agents": {
+        "Exception outcome": 1.0,
+        "Exception hours": 1.0,
+        "Conversation tools": 0.86
       }
     }
   }
