@@ -27,6 +27,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPriorAuthBot(builder.Configuration);
 builder.Services.AddProblemDetails();
 
+// Chapter 12: the guardrails can be switched off only on a developer's machine.
+if (!builder.Configuration.GetValue("Security:Guardrails", true) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("Security:Guardrails can be false only in the Development environment.");
+}
+
 // Ingestion runs in the background and keeps the index in sync with the documents (chapter 7).
 builder.Services.AddOptions<IngestionWorkerOptions>().Bind(builder.Configuration.GetSection(IngestionWorkerOptions.SectionName));
 builder.Services.AddSingleton<IngestionWorker>();
@@ -145,6 +151,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseGroupOverageHandling();
+app.UseGuardrailHandling();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

@@ -13,6 +13,7 @@ namespace PriorAuthBot.Eval;
 ///   dotnet run --project eval/PriorAuthBot.Eval -- --provider Ollama --answers   plus LLM judges on the judged sample
 ///   add --tools to any of them for chapter 10's tool cases (tool choice, arguments, approvals)
 ///   add --agents for chapter 11's agent cases (the exception workflow and policy agent conversations)
+///   add --redteam for chapter 12's attacks, run with the guardrails and again without them
 /// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
 /// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
 /// </summary>
@@ -144,6 +145,37 @@ internal static class EvalProgram
             }
         }
 
+        // 2d. Red team (chapter 12): every attack with the guardrails, then again without them. Only the
+        // first run is gated; the second shows what the guardrails stop.
+        RedTeamSummary? redTeamSummary = null;
+        if (settings.RedTeam)
+        {
+            var cases = RedTeamCaseSet.Load();
+            var runsByMode = new Dictionary<bool, IReadOnlyList<RedTeamResult>>();
+            foreach (var guardrails in new[] { true, false })
+            {
+                var owned = new List<IAsyncDisposable>();
+                var config = settings.Configuration(set);
+                config["Security:Guardrails"] = guardrails ? "true" : "false";
+                await using (var host = EvalHost.Create(config, cache, configure: s => RedTeamEvaluation.Configure(s, owned, slowModel: settings.Provider == EvalSettings.Ollama)))
+                {
+                    await RedTeamEvaluation.IngestAsync(host);
+                    Console.WriteLine($"Red team, guardrails {(guardrails ? "on" : "off")}:");
+                    runsByMode[guardrails] = await RedTeamEvaluation.RunAsync(host, set, cases, line => Console.WriteLine("  " + line));
+                }
+
+                foreach (var server in owned)
+                {
+                    await server.DisposeAsync();
+                }
+            }
+
+            redTeamSummary = RedTeamSummary.Of(runsByMode[true]);
+            var redTeamReport = Reports.RedTeam(settings.Provider, runsByMode[true], redTeamSummary, runsByMode[false], RedTeamSummary.Of(runsByMode[false]));
+            await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-redteam-{settings.Provider.ToLowerInvariant()}.md"), redTeamReport);
+            Console.WriteLine(redTeamReport);
+        }
+
         if (cache is not null)
         {
             Console.WriteLine($"Answer and embedding cache: {cache.Hits} hits, {cache.Misses} misses.");
@@ -156,8 +188,8 @@ internal static class EvalProgram
         }
 
         var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
-        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary);
-        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary, agentSummary));
+        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary, redTeamSummary);
+        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary, agentSummary, redTeamSummary));
         await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
         Console.WriteLine(gateReport);
         return gate.Ok ? 0 : 1;

@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.AI;
 using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Prompts;
+using PriorAuthBot.Core.Security;
 
 namespace PriorAuthBot.Core.Retrieval.Reranking;
 
@@ -30,7 +31,9 @@ public sealed class LlmReranker(IChatClient chatClient) : IReranker
             return [];
         }
 
-        var block = new StringBuilder();
+        // Chapter 12: each passage is its own content, flagged untrusted, so the guardrails can check it
+        // as a document (and drop just that one) instead of reading it as the user's own words.
+        List<AIContent> contents = [new TextContent($"<question>{query}</question>\n\n<passages>\n")];
         for (var i = 0; i < passages.Count; i++)
         {
             var text = passages[i].ReplaceLineEndings(" ");
@@ -39,13 +42,15 @@ public sealed class LlmReranker(IChatClient chatClient) : IReranker
                 text = text[..MaxPassageCharacters] + "…";
             }
 
-            block.Append(CultureInfo.InvariantCulture, $"[{i + 1}] {text}\n\n");
+            var separator = i == passages.Count - 1 ? "\n" : "\n\n";
+            contents.Add(UntrustedContent.Flag(string.Create(CultureInfo.InvariantCulture, $"[{i + 1}] {text}{separator}"), $"passage {i + 1}"));
         }
 
+        contents.Add(new TextContent("</passages>"));
         List<ChatMessage> messages =
         [
             new(ChatRole.System, PromptLibrary.Get(PromptLibrary.RerankPassages)),
-            new(ChatRole.User, $"<question>{query}</question>\n\n<passages>\n{block.ToString().TrimEnd()}\n</passages>"),
+            new(ChatRole.User, contents),
         ];
         var result = await chatClient.GetValidatedResponseAsync<RelevanceScores>(messages, new ChatOptions { Temperature = 0 }, cancellationToken: cancellationToken).ConfigureAwait(false);
 

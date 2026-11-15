@@ -1,6 +1,7 @@
 using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Search;
+using PriorAuthBot.Core.Security;
 
 namespace PriorAuthBot.Api;
 
@@ -36,6 +37,31 @@ internal static class GroupOverageHandling
             catch (GroupOverageException ex)
             {
                 await Results.Problem(ex.Message, statusCode: StatusCodes.Status403Forbidden).ExecuteAsync(context);
+            }
+        });
+}
+
+internal static class GuardrailHandling
+{
+    /// <summary>
+    /// Chapter 12: a request the guardrails refused is a 422 with PriorAuthBot's own message, from any
+    /// endpoint, and a shield that cannot be reached (when configured to fail closed) is a 503.
+    /// Neither echoes the user's text or says which check fired.
+    /// </summary>
+    public static void UseGuardrailHandling(this WebApplication app) =>
+        app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next(context);
+            }
+            catch (PromptRejectedException ex)
+            {
+                await Results.Problem(ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity).ExecuteAsync(context);
+            }
+            catch (PromptShieldUnavailableException)
+            {
+                await Results.Problem("PriorAuthBot's safety checks are unavailable. Try again shortly.", statusCode: StatusCodes.Status503ServiceUnavailable).ExecuteAsync(context);
             }
         });
 }

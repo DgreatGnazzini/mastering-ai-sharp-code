@@ -108,4 +108,7 @@ public static class StopCodes
     public const string PastDeadline = "past-deadline";
     public const string NoApprover = "no-approver";
     public const string Limit = "limit";
+
+    /// <summary>Chapter 12: the guardrails refused the request text.</summary>
+    public const string Blocked = "blocked";
 }

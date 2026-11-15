@@ -42,6 +42,37 @@ public static partial class PhiRedactor
         return new RedactionResult(text, counts);
     }
 
+    /// <summary>
+    /// Redaction on the way out (chapter 12). An identifier may appear in an answer only if it was in
+    /// what the model was given (<paramref name="ground"/>): a model has no business producing a member
+    /// ID or phone number it was not shown, whether it remembered one, guessed one, or was talked into
+    /// one. Social Security numbers are always redacted, because no answer needs one.
+    /// </summary>
+    public static RedactionResult RedactUngrounded(string text, string ground)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(ground);
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        string Replace(string input, Regex pattern, string label, bool always = false) => pattern.Replace(input, m =>
+        {
+            if (!always && ground.Contains(m.Value, StringComparison.OrdinalIgnoreCase))
+            {
+                return m.Value;
+            }
+
+            counts[label] = counts.GetValueOrDefault(label) + 1;
+            return $"[{label}]";
+        });
+
+        text = Replace(text, Ssn(), "SSN", always: true);
+        text = Replace(text, MemberId(), "MEMBER_ID");
+        text = Replace(text, Mrn(), "MRN");
+        text = Replace(text, Email(), "EMAIL");
+        text = Replace(text, Phone(), "PHONE");
+        return new RedactionResult(text, counts);
+    }
+
     [GeneratedRegex(@"\bDD-\d{7}\b")]
     private static partial Regex MemberId();
 

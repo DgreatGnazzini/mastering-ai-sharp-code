@@ -4,6 +4,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Prompts;
+using PriorAuthBot.Core.Security;
 using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Core.Tools;
 
@@ -59,6 +60,12 @@ public static class ExceptionWorkflow
     }
 
     internal static ExceptionOutcome Stopped(string code, string message) => new(ExceptionStatus.Stopped, code, message);
+
+    /// <summary>Chapter 12: true when a justification states a decision ("has been approved") instead of asking for one.</summary>
+    public static bool ClaimsDecision(string justification) => DraftStep.ClaimsDecision(justification ?? string.Empty);
+
+    /// <summary>How a justification starts when the model's text claimed a decision and the requester's own reason replaced it.</summary>
+    public const string RequesterReasonLabel = "The requester's reason, in their words:";
 }
 
 /// <summary>Step 1, a model step: the request as structured data. It has no tools, so all it can do is read.</summary>
@@ -103,6 +110,11 @@ internal sealed class UnderstandStep(ExceptionRunContext run, PolicyAgentFactory
         catch (AgentLimitExceededException ex)
         {
             await context.YieldOutputAsync(ExceptionWorkflow.Stopped(StopCodes.Limit, ex.Message), cancellationToken).ConfigureAwait(false);
+        }
+        catch (PromptRejectedException ex)
+        {
+            // Chapter 12: the request text tried to override the rules, or was too long. Nothing was drafted.
+            await context.YieldOutputAsync(ExceptionWorkflow.Stopped(StopCodes.Blocked, ex.Message), cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -206,7 +218,7 @@ internal sealed class CheckStep() : Executor<ExceptionCase>("check")
 /// </summary>
 [SendsMessage(typeof(ExceptionDraft))]
 [YieldsOutput(typeof(ExceptionOutcome))]
-internal sealed class DraftStep(ExceptionRunContext run, PolicyAgentFactory agents) : Executor<PolicyCheck>("draft")
+internal sealed partial class DraftStep(ExceptionRunContext run, PolicyAgentFactory agents) : Executor<PolicyCheck>("draft")
 {
     public const int MaxJustification = 800;
 
@@ -225,6 +237,19 @@ internal sealed class DraftStep(ExceptionRunContext run, PolicyAgentFactory agen
         {
             await context.YieldOutputAsync(ExceptionWorkflow.Stopped(StopCodes.Limit, ex.Message), cancellationToken).ConfigureAwait(false);
             return;
+        }
+        catch (PromptRejectedException ex)
+        {
+            await context.YieldOutputAsync(ExceptionWorkflow.Stopped(StopCodes.Blocked, ex.Message), cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        // Chapter 12: the justification is the model's words in front of the approver. It may argue for
+        // the exception; it may not say a decision was already made. If it does, the approver gets the
+        // requester's own reason instead, labeled as theirs.
+        if (ClaimsDecision(text))
+        {
+            text = string.Create(CultureInfo.InvariantCulture, $"{ExceptionWorkflow.RequesterReasonLabel} \"{c.Request.Reason.Replace('"', '\'')}\"");
         }
 
         var draft = new ExceptionDraft(
@@ -264,13 +289,22 @@ internal sealed class DraftStep(ExceptionRunContext run, PolicyAgentFactory agen
             """);
     }
 
-    // The approver sees this in a review screen. Keep it short and plain: no Markdown links or
-    // images that could carry data out when rendered (chapter 12 covers rendering in full).
+    /// <summary>
+    /// Words that state a decision rather than ask for one: "approved", "pre-approved", "authorized",
+    /// "signed off". A justification asks; only the approver decides.
+    /// </summary>
+    internal static bool ClaimsDecision(string text) => DecisionClaim().IsMatch(text);
+
+    // The approver sees this in a review screen. Keep it short and plain: no Markdown links, images,
+    // or HTML that could carry data out when rendered. Chapter 12's sanitizer does the work.
     private static string Plain(string text)
     {
-        var plain = text.Replace("![", "[", StringComparison.Ordinal).Replace("](", "] (", StringComparison.Ordinal).Trim();
+        var plain = MarkdownSanitizer.Sanitize(text).Text.Trim();
         return plain.Length <= MaxJustification ? plain : plain[..MaxJustification] + "...";
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(?<!\bbe |\bif )(pre-?)?(approved|authori[sz]ed)\b(?! (or|and) )|\bsigned off\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex DecisionClaim();
 }
 
 /// <summary>Step 5, a code step after the requester answers: send it on, or stop.</summary>
