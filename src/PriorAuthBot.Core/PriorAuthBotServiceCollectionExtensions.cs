@@ -14,6 +14,7 @@ using PriorAuthBot.Core.Intake;
 using PriorAuthBot.Core.Ingestion;
 using PriorAuthBot.Core.Rag;
 using PriorAuthBot.Core.Mcp;
+using PriorAuthBot.Core.Observability;
 using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Core.Tools;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,6 +51,7 @@ public static class PriorAuthBotServiceCollectionExtensions
 
         services.AddPriorAuthBotTools(configuration);
         services.AddPriorAuthBotAgents(configuration);
+        services.AddPriorAuthBotObservability(configuration);
         return services;
     }
 

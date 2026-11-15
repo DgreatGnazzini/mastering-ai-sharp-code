@@ -42,6 +42,9 @@ public sealed class DemoAuthenticationHandler(
             new("name", persona["Name"] ?? user),
         ];
         claims.AddRange(persona.GetSection("Groups").Get<string[]>()?.Select(g => new Claim("groups", g)) ?? []);
+
+        // Chapter 13: app roles, as Entra puts them in the "roles" claim, such as the audit reader role.
+        claims.AddRange(persona.GetSection("Roles").Get<string[]>()?.Select(r => new Claim("roles", r)) ?? []);
         if (persona.GetValue<bool>("GroupOverage"))
         {
             claims.Add(new Claim("hasgroups", "true"));

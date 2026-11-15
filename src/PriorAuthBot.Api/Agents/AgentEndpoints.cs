@@ -5,9 +5,15 @@ using PriorAuthBot.Core.Agents.Exceptions;
 
 namespace PriorAuthBot.Api.Agents;
 
-public sealed record AgentRequest(string Message, string? ConversationId = null);
+public sealed record AgentRequest(string Message, string? ConversationId = null) : PriorAuthBot.Api.Observability.IAuditedRequest
+{
+    string PriorAuthBot.Api.Observability.IAuditedRequest.AuditText => Message;
+}
 
-public sealed record ExceptionStartRequest(string Message);
+public sealed record ExceptionStartRequest(string Message) : PriorAuthBot.Api.Observability.IAuditedRequest
+{
+    string PriorAuthBot.Api.Observability.IAuditedRequest.AuditText => Message;
+}
 
 public sealed record ExceptionSubmitRequest(bool Submit);
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -5,7 +6,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using PriorAuthBot.Core.Retrieval.Keyword;
 using PriorAuthBot.Core.Retrieval.Reranking;
+using PriorAuthBot.Core.Observability;
 using PriorAuthBot.Core.Search;
+using PriorAuthBot.Core.Usage;
 
 namespace PriorAuthBot.Core.Retrieval;
 
@@ -35,6 +38,11 @@ public sealed partial class SecureRetriever(
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentNullException.ThrowIfNull(caller);
 
+        // Chapter 13: one span per search, with counts only. The query text never goes on a span.
+        using var activity = PriorAuthBotTelemetry.Source.StartActivity("priorauthbot.retrieve");
+        var settings = options.Value;
+        activity?.SetTag(PriorAuthBotTelemetry.Tags.RetrievalMode, settings.Mode.ToString());
+
         // No groups means no access. Never translate "no groups" into "no filter".
         if (caller.Groups.Count == 0)
         {
@@ -42,12 +50,12 @@ public sealed partial class SecureRetriever(
             return [];
         }
 
-        var settings = options.Value;
         var results = settings.Mode == RetrievalMode.Vector
             ? await VectorSearchAsync(query, caller, settings.Top, cancellationToken).ConfigureAwait(false)
             : await HybridSearchAsync(query, caller, settings, cancellationToken).ConfigureAwait(false);
 
         LogSearch(logger, caller.UserId, results.Count);
+        Record(activity, results.Select(r => r.Record), caller, AccessKind.Retrieved);
         return results;
     }
 
@@ -79,6 +87,7 @@ public sealed partial class SecureRetriever(
         }
 
         chunks.Sort((a, b) => a.ChunkIndex.CompareTo(b.ChunkIndex));
+        Record(null, chunks, caller, AccessKind.Viewed);
         var first = chunks[0];
         return new DocumentView(first.DocumentId, first.Title, first.PolicyNumber,
             chunks.Select(c => new DocumentViewSection(Rag.Citations.Link(c).Split('#').ElementAtOrDefault(1) ?? string.Empty, c.Section, c.Page, c.Text)).ToList());
@@ -232,6 +241,26 @@ public sealed partial class SecureRetriever(
     }
 
     /// <summary>Defense in depth: the filter already did this. If it ever fails, stop loudly.</summary>
+    /// <summary>
+    /// Chapter 13: every chunk that leaves the retriever is recorded on the request's audit context.
+    /// This is the only way to documents, so nothing reaches a prompt, a search result, or a tool
+    /// without an audit entry, whichever endpoint or agent asked.
+    /// </summary>
+    private static void Record(Activity? activity, IEnumerable<ChunkRecord> records, CallerIdentity caller, AccessKind access)
+    {
+        var list = records as IReadOnlyCollection<ChunkRecord> ?? [.. records];
+        var request = AiRequestContext.Current;
+        request?.SetCaller(caller);
+        request?.RecordDocuments(list, access);
+        if (activity is not null)
+        {
+            var documents = list.DistinctBy(r => r.DocumentId).ToList();
+            activity.SetTag(PriorAuthBotTelemetry.Tags.ChunkCount, list.Count);
+            activity.SetTag(PriorAuthBotTelemetry.Tags.DocumentCount, documents.Count);
+            activity.SetTag(PriorAuthBotTelemetry.Tags.PhiDocumentCount, documents.Count(d => d.ContainsPhi));
+        }
+    }
+
     private static void Check(ChunkRecord record, CallerIdentity caller)
     {
         if (!caller.IsInAnyGroup(record.AllowedGroups))

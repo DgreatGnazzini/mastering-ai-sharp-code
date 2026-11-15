@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Prompts\Templates\*.md;Prompts\Templates\*.json" LogicalName="PriorAuthBot.Core.Prompts.Templates.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Audit\audit-log.sql" LogicalName="PriorAuthBot.Core.Audit.audit-log.sql" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="PriorAuthBot.Tests" />
