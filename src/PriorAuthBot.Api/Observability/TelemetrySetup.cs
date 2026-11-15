@@ -43,6 +43,7 @@ internal static class TelemetrySetup
                     PriorAuthBotTelemetry.AiSourceName, // gen_ai.client.token.usage and operation.duration
                     "Microsoft.AspNetCore.Hosting",
                     "Microsoft.AspNetCore.Server.Kestrel",
+                    "System.Runtime",                   // GC, thread pool, CPU (.NET 9 and later)
                     "System.Net.Http"));
 
         if (otlp)
