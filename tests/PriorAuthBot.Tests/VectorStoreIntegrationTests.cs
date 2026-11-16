@@ -97,6 +97,20 @@ public abstract class VectorStoreIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PolicyLookupFiltersByGroupInTheStore()
+    {
+        // Chapter 10's lookup_policy tool: the policy-number filter and the group filter in one query.
+        Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);
+        var retriever = Host.Get<SecureRetriever>();
+
+        var nurse = await retriever.GetDocumentByPolicyNumberAsync("CLN-410", Set.Caller("nurse"), TestContext.Current.CancellationToken);
+        var contractor = await retriever.GetDocumentByPolicyNumberAsync("CLN-410", Set.Caller("contractor"), TestContext.Current.CancellationToken);
+
+        Assert.Equal("sepsis-screening-protocol", nurse?.DocumentId);
+        Assert.Null(contractor);
+    }
+
+    [Fact]
     public async Task CallerWithNoGroupsGetsNothing()
     {
         Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);

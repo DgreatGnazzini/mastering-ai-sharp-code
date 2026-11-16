@@ -22,7 +22,7 @@ internal sealed class RagTestHost : IAsyncDisposable
 
     public IServiceProvider Services => _services;
 
-    public static RagTestHost Create(IDictionary<string, string?>? overrides = null, IChatClient? chatClient = null)
+    public static RagTestHost Create(IDictionary<string, string?>? overrides = null, IChatClient? chatClient = null, Action<IServiceCollection>? configure = null)
     {
         var settings = new Dictionary<string, string?>
         {
@@ -45,6 +45,7 @@ internal sealed class RagTestHost : IAsyncDisposable
             services.AddSingleton(chatClient);
         }
 
+        configure?.Invoke(services);
         return new RagTestHost(services.BuildServiceProvider());
     }
 

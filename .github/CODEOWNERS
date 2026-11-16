@@ -7,3 +7,7 @@
 # request, so it needs the same review as a prompt change.
 /eval/baselines.json @DgreatGnazzini
 /eval/datasets/ @DgreatGnazzini
+
+# The MCP allowlist and its pinned fingerprints (chapter 10) live in the API's settings. Adding a
+# server, a tool, or a new fingerprint changes what the model can do, so it gets the same review.
+/src/PriorAuthBot.Api/appsettings.json @DgreatGnazzini

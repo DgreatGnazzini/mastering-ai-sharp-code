@@ -433,6 +433,10 @@ appsettings.Development.json
 # and the tests need them. Secrets go in user secrets.
 !src/PriorAuthBot.Api/appsettings.Development.json
 
+# The mock HR API's Development settings hold only a development signing key that the tests
+# and the demo share with PriorAuthBot (chapter 10). It is refused outside Development.
+!samples/mock-apis/DeductibleDynamics.MockHr/appsettings.Development.json
+
 # Snapshot tests write this on a mismatch (chapter 3)
 *.received.txt
 

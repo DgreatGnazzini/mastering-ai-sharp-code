@@ -52,6 +52,30 @@ public class PromptSnapshotTests
         Snapshot.Match(PromptLibrary.RewriteQuery, Describe(model.Requests[0], model.Options[0]));
     }
 
+    /// <summary>
+    /// Chapter 10: a tool's name, description, and schema are prompt text too. The model reads them on
+    /// every request, so they are snapshotted with the system prompt and reviewed like it.
+    /// </summary>
+    [Fact]
+    public async Task AssistantTools()
+    {
+        var model = new ScriptedToolModel(ScriptedToolModel.Reply("Hello."));
+        await using var hr = new MockHrFactory();
+        await using var host = await ToolTestHost.CreateAsync(hr, model);
+
+        await host.Get<Core.Tools.AssistantService>().AskAsync("{message}", new Core.Tools.ToolCaller(ToolTestHost.Nurse), TestContext.Current.CancellationToken);
+
+        var text = new StringBuilder(Describe(model.Requests[0], model.Options[0]));
+        foreach (var tool in model.Options[0]!.Tools!.OfType<AIFunctionDeclaration>())
+        {
+            text.Append("### tool: ").Append(tool.Name).Append(tool is ApprovalRequiredAIFunction ? " (requires approval)" : string.Empty).Append('\n')
+                .Append(tool.Description).Append('\n')
+                .Append(JsonSerializer.Serialize(tool.JsonSchema, IndentedJson)).Append("\n\n");
+        }
+
+        Snapshot.Match(PromptLibrary.AssistantTools, text.ToString());
+    }
+
     private static string Describe(IReadOnlyList<ChatMessage> messages, ChatOptions? options)
     {
         var text = new StringBuilder();

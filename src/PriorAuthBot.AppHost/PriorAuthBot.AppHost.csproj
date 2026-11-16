@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PriorAuthBot.Api\PriorAuthBot.Api.csproj" />
+    <ProjectReference Include="..\..\samples\mock-apis\DeductibleDynamics.MockHr\DeductibleDynamics.MockHr.csproj" />
   </ItemGroup>
 </Project>

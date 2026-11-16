@@ -6,8 +6,8 @@ namespace PriorAuthBot.Core;
 /// </summary>
 public sealed record PriorAuthBotInfo(string Name, string Organization, string Chapter)
 {
-    /// <summary>The chapter tag this code corresponds to ("ch00" is the starting skeleton).</summary>
-    public const string CurrentChapter = "ch09";
+    /// <summary>The chapter tag this code corresponds to. MCP clients and servers also see it as the version.</summary>
+    public const string CurrentChapter = "ch10";
 
     public static PriorAuthBotInfo Current { get; } = new("PriorAuthBot", "Deductible Dynamics", CurrentChapter);
 }

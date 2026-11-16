@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\PriorAuthBot.Core\PriorAuthBot.Core.csproj" />
+    <ProjectReference Include="..\..\samples\mcp\DeductibleDynamics.Formulary\DeductibleDynamics.Formulary.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="PriorAuthBot.Tests" />

@@ -13,7 +13,8 @@ internal sealed record EvalSettings(
     string ReportDirectory,
     string CacheDirectory,
     string BaselinesPath,
-    string ExecutionName)
+    string ExecutionName,
+    bool Tools = false)
 {
     public const string Offline = "Offline";
     public const string Ollama = "Ollama";
@@ -50,7 +51,8 @@ internal sealed record EvalSettings(
             Value("--out") ?? Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_REPORTS") ?? Path.Combine(Directory.GetCurrentDirectory(), "eval-reports"),
             Value("--cache") ?? Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_CACHE") ?? Path.Combine(EvalPaths.RepoRoot, ".eval-cache"),
             Value("--baselines") ?? EvalPaths.Baselines,
-            Value("--execution") ?? DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture));
+            Value("--execution") ?? DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture),
+            args.Contains("--tools"));
     }
 
     /// <summary>PriorAuthBot's configuration for this provider, as the API would read it.</summary>

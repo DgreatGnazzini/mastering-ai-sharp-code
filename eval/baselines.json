@@ -1,5 +1,5 @@
 {
-  "description": "Accepted numbers for PriorAuthBot's shipped configuration (hybrid retrieval), per provider. The eval fails a run that falls more than the tolerance below these. Changes need a CODEOWNERS review. Leaks are not here: any leak fails the run.",
+  "description": "Accepted numbers for PriorAuthBot's shipped configuration (hybrid retrieval), per provider. The eval fails a run that falls more than the tolerance below these. Changes need a CODEOWNERS review. Leaks and writes without approval are not here: any one fails the run.",
   "tolerance": {
     "retrieval": 0.02,
     "judgeScore": 0.5,
@@ -11,6 +11,10 @@
         "recallAtTop": 0.95,
         "mrr": 0.95,
         "declinesKept": 0.96
+      },
+      "tools": {
+        "Tool selection": 1.0,
+        "Tool arguments": 1.0
       }
     },
     "Ollama": {
@@ -25,6 +29,10 @@
         "Completeness": 3.68,
         "Citation faithfulness": 0.78,
         "Contains expected fact": 0.79
+      },
+      "tools": {
+        "Tool selection": 0.8,
+        "Tool arguments": 0.86
       }
     }
   }

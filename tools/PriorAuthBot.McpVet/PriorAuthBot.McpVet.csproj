@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Chapter 10: prints what an MCP server offers, so a person can vet it before it goes on
+    PriorAuthBot's allowlist: the server's name and version, each tool's description and schema,
+    any lint findings, and the fingerprints to pin in configuration.
+      See Program.cs for how to run it.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PriorAuthBot.Core\PriorAuthBot.Core.csproj" />
+  </ItemGroup>
+</Project>
