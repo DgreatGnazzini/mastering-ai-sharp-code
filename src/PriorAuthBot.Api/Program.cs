@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.AI;
 using PriorAuthBot.Api;
+using PriorAuthBot.Api.Agents;
 using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Api.Ingestion;
 using PriorAuthBot.Api.Mcp;
@@ -221,6 +222,9 @@ api.MapPost("/ask", async (AskRequest request, ClaimsPrincipal user, CallerIdent
 
 // Chapter 10: the model with tools, and approval for every write.
 api.MapAssistant();
+
+// Chapter 11: the policy agent, and the policy exception workflow with its two human steps.
+api.MapAgents();
 
 // Chapter 10: the MCP endpoint, behind the same sign-in and per-user rate limit as everything else.
 app.MapMcp("/mcp").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);

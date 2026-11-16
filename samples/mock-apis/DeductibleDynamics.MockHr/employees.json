@@ -1,7 +1,8 @@
 {
-  "demo-nurse": { "name": "Nina Okafor, RN", "availableHours": 86.5, "accruedThisYearHours": 153.8, "usedThisYearHours": 112, "carryoverLimitHours": 40 },
-  "demo-claims": { "name": "Marcus Reyes", "availableHours": 41.0, "accruedThisYearHours": 123.1, "usedThisYearHours": 120, "carryoverLimitHours": 40 },
-  "demo-hr": { "name": "Ingrid Nelson", "availableHours": 120.25, "accruedThisYearHours": 184.6, "usedThisYearHours": 96, "carryoverLimitHours": 40 },
-  "demo-compliance": { "name": "Dana Whitfield", "availableHours": 63.0, "accruedThisYearHours": 153.8, "usedThisYearHours": 128, "carryoverLimitHours": 40 },
-  "demo-staff": { "name": "Sam Ortiz", "availableHours": 22.75, "accruedThisYearHours": 92.3, "usedThisYearHours": 80, "carryoverLimitHours": 40 }
+  "demo-nurse": { "name": "Nina Okafor, RN", "availableHours": 86.5, "accruedThisYearHours": 153.8, "usedThisYearHours": 112, "carryoverLimitHours": 40, "managerId": "demo-manager" },
+  "demo-claims": { "name": "Marcus Reyes", "availableHours": 41.0, "accruedThisYearHours": 123.1, "usedThisYearHours": 120, "carryoverLimitHours": 40, "managerId": "demo-compliance" },
+  "demo-hr": { "name": "Ingrid Nelson", "availableHours": 120.25, "accruedThisYearHours": 184.6, "usedThisYearHours": 96, "carryoverLimitHours": 40, "managerId": "demo-compliance" },
+  "demo-compliance": { "name": "Dana Whitfield", "availableHours": 63.0, "accruedThisYearHours": 153.8, "usedThisYearHours": 128, "carryoverLimitHours": 40, "managerId": null },
+  "demo-staff": { "name": "Sam Ortiz", "availableHours": 22.75, "accruedThisYearHours": 92.3, "usedThisYearHours": 80, "carryoverLimitHours": 40, "managerId": "demo-manager" },
+  "demo-manager": { "name": "Grace Lindqvist, RN, nurse manager", "availableHours": 54.0, "accruedThisYearHours": 184.6, "usedThisYearHours": 140, "carryoverLimitHours": 40, "managerId": "demo-compliance" }
 }

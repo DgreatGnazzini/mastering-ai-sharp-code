@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PriorAuthBot.Core.AI;
+using PriorAuthBot.Core.Agents;
+using PriorAuthBot.Core.Agents.Exceptions;
 using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Documents;
 using PriorAuthBot.Core.Identity;
@@ -47,6 +49,29 @@ public static class PriorAuthBotServiceCollectionExtensions
         services.AddSingleton<CallerIdentityFactory>();
 
         services.AddPriorAuthBotTools(configuration);
+        services.AddPriorAuthBotAgents(configuration);
+        return services;
+    }
+
+    /// <summary>
+    /// Chapter 11: the policy agent and the policy exception workflow, their limits, and where their
+    /// conversations, runs, and checkpoints are kept between requests.
+    /// </summary>
+    public static IServiceCollection AddPriorAuthBotAgents(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<AgentOptions>().Bind(configuration.GetSection(AgentOptions.SectionName));
+
+        // Memory on a laptop. With more than one API instance, register Redis or SQL Server's
+        // IDistributedCache instead (chapter 14), and conversations and runs survive a restart.
+        services.AddDistributedMemoryCache();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<PolicyAgentFactory>();
+        services.AddSingleton<AgentConversationStore>();
+        services.AddSingleton<PolicyAgentService>();
+        services.TryAddSingleton<IExceptionRegister, InMemoryExceptionRegister>();
+        services.AddSingleton<ExceptionRunStore>();
+        services.AddSingleton<DistributedCheckpointStore>();
+        services.AddSingleton<ExceptionRequestService>();
         return services;
     }
 

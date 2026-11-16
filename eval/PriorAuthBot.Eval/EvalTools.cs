@@ -24,6 +24,23 @@ internal sealed class EvalHrHandler : HttpMessageHandler
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
 
+        // Chapter 11: the caller's manager, with the manager's ID in the eval's own naming.
+        if (request.RequestUri?.AbsolutePath.EndsWith("/me/manager", StringComparison.Ordinal) == true)
+        {
+            if (!employee.TryGetProperty("managerId", out var managerId) || managerId.ValueKind != JsonValueKind.String
+                || !_employees.TryGetValue(managerId.GetString()!, out var manager))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+
+            var managerBody = JsonSerializer.Serialize(new
+            {
+                managerId = managerId.GetString()!.Replace("demo-", "golden-", StringComparison.Ordinal),
+                managerName = manager.GetProperty("name").GetString(),
+            });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(managerBody, Encoding.UTF8, "application/json") });
+        }
+
         var body = JsonSerializer.Serialize(new
         {
             employeeName = employee.GetProperty("name").GetString(),

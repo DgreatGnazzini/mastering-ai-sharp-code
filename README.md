@@ -93,7 +93,7 @@ curl -X POST http://localhost:5080/assist -H "X-Demo-User: nurse" -H "Content-Ty
 curl -X POST http://localhost:5080/actions/<id from pendingActions>/approve -H "X-Demo-User: nurse"
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI, [docs/chapters/ch08.md](docs/chapters/ch08.md) for hybrid search, the reranker, and the chat page at `/ui`, [docs/chapters/ch09.md](docs/chapters/ch09.md) for the evaluation suite (`dotnet run --project eval/PriorAuthBot.Eval`), and [docs/chapters/ch10.md](docs/chapters/ch10.md) for tools, approvals, and MCP.
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI, [docs/chapters/ch08.md](docs/chapters/ch08.md) for hybrid search, the reranker, and the chat page at `/ui`, [docs/chapters/ch09.md](docs/chapters/ch09.md) for the evaluation suite (`dotnet run --project eval/PriorAuthBot.Eval`), [docs/chapters/ch10.md](docs/chapters/ch10.md) for tools, approvals, and MCP, and [docs/chapters/ch11.md](docs/chapters/ch11.md) for the policy agent and the exception workflow.
 
 ## Configuration and secrets
 

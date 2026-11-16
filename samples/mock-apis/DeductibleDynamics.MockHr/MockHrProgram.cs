@@ -4,8 +4,11 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace DeductibleDynamics.MockHr;
 
-/// <summary>PTO balances by employee object ID ("oid"), as the HR system would hold them. Synthetic.</summary>
-public sealed record EmployeePto(string Name, double AvailableHours, double AccruedThisYearHours, double UsedThisYearHours, double CarryoverLimitHours);
+/// <summary>
+/// PTO balances by employee object ID ("oid"), as the HR system would hold them, and each person's
+/// manager (chapter 11). Synthetic.
+/// </summary>
+public sealed record EmployeePto(string Name, double AvailableHours, double AccruedThisYearHours, double UsedThisYearHours, double CarryoverLimitHours, string? ManagerId = null);
 
 /// <summary>
 /// The mock HR API (chapter 10). The entry point is a named class so the tests can host it next to
@@ -15,6 +18,9 @@ public sealed class MockHrProgram
 {
     /// <summary>The scope a token must carry. It is delegated: a user granted it to PriorAuthBot.</summary>
     public const string PtoReadScope = "Pto.Read";
+
+    /// <summary>Chapter 11: the delegated scope for reading your own reporting line. Also read only.</summary>
+    public const string ProfileReadScope = "Profile.Read";
 
     private MockHrProgram()
     {
@@ -61,12 +67,9 @@ public sealed class MockHrProgram
         // A delegated token for a user: it names the user (oid) and carries the scope the user
         // consented to (scp). An app-only token from the client credentials flow has neither, so
         // PriorAuthBot's own identity can never read anyone's balance.
-        builder.Services.AddAuthorizationBuilder().AddPolicy("pto-read", policy => policy
-            .RequireAuthenticatedUser()
-            .RequireClaim("oid")
-            .RequireAssertion(context => context.User.FindAll("scp")
-                .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                .Contains(PtoReadScope, StringComparer.Ordinal)));
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy("pto-read", policy => RequireDelegatedScope(policy, PtoReadScope))
+            .AddPolicy("profile-read", policy => RequireDelegatedScope(policy, ProfileReadScope));
 
         var app = builder.Build();
         app.UseAuthentication();
@@ -94,6 +97,25 @@ public sealed class MockHrProgram
                 : Results.NotFound();
         }).RequireAuthorization("pto-read");
 
+        // Chapter 11: who approves your exceptions. Again no employee ID parameter: it is your own manager.
+        app.MapGet("/me/manager", (HttpContext context) =>
+        {
+            var oid = context.User.FindFirst("oid")!.Value;
+            if (!employees.TryGetValue(oid, out var e) || e.ManagerId is null || !employees.TryGetValue(e.ManagerId, out var manager))
+            {
+                return Results.NotFound();
+            }
+
+            return Results.Ok(new { managerId = e.ManagerId, managerName = manager.Name });
+        }).RequireAuthorization("profile-read");
+
         return app;
     }
+
+    private static void RequireDelegatedScope(Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder policy, string scope) => policy
+        .RequireAuthenticatedUser()
+        .RequireClaim("oid")
+        .RequireAssertion(context => context.User.FindAll("scp")
+            .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Contains(scope, StringComparer.Ordinal));
 }

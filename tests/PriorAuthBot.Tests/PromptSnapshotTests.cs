@@ -76,9 +76,53 @@ public class PromptSnapshotTests
         Snapshot.Match(PromptLibrary.AssistantTools, text.ToString());
     }
 
+    /// <summary>
+    /// Chapter 11: the policy agent. ChatClientAgent sends its instructions as ChatOptions.Instructions,
+    /// not as a system message, so the snapshot includes them, with every tool the agent is given.
+    /// </summary>
+    [Fact]
+    public async Task AgentPolicyAssistant()
+    {
+        var model = new ScriptedToolModel(ScriptedToolModel.Reply("Hello."));
+        await using var hr = new MockHrFactory();
+        await using var host = await AgentTestHost.CreateAsync(hr, model);
+
+        await host.Get<Core.Agents.PolicyAgentService>().RunAsync("{message}", null, new Core.Tools.ToolCaller(ToolTestHost.Nurse), TestContext.Current.CancellationToken);
+
+        var text = new StringBuilder(Describe(model.Requests[0], model.Options[0]));
+        foreach (var tool in model.Options[0]!.Tools!.OfType<AIFunctionDeclaration>())
+        {
+            text.Append("### tool: ").Append(tool.Name).Append(tool is ApprovalRequiredAIFunction ? " (requires approval)" : string.Empty).Append('\n')
+                .Append(tool.Description).Append("\n\n");
+        }
+
+        Snapshot.Match(PromptLibrary.AgentPolicyAssistant, text.ToString());
+    }
+
+    /// <summary>Chapter 11: the exception workflow's two model steps, as the model sees them.</summary>
+    [Fact]
+    public async Task ExceptionSteps()
+    {
+        var model = new ScriptedToolModel(
+            ScriptedToolModel.Reply("""{"policyNumber":"HR-104","request":"Carry over 60 hours of PTO","requestedHours":60,"reason":"{reason}"}"""),
+            ScriptedToolModel.Reply("{justification}"));
+        await using var hr = new MockHrFactory();
+        await using var host = await AgentTestHost.CreateAsync(hr, model);
+
+        await host.Get<Core.Agents.Exceptions.ExceptionRequestService>().StartAsync("{message}", new Core.Tools.ToolCaller(ToolTestHost.Nurse), TestContext.Current.CancellationToken);
+
+        Snapshot.Match(PromptLibrary.ExceptionUnderstand, Describe(model.Requests[0], model.Options[0]));
+        Snapshot.Match(PromptLibrary.ExceptionDraft, Describe(model.Requests[1], model.Options[1]));
+    }
+
     private static string Describe(IReadOnlyList<ChatMessage> messages, ChatOptions? options)
     {
         var text = new StringBuilder();
+        if (options?.Instructions is { Length: > 0 } instructions)
+        {
+            text.Append("### instructions\n").Append(instructions).Append("\n\n");
+        }
+
         foreach (var message in messages)
         {
             text.Append("### ").Append(message.Role).Append('\n').Append(message.Text).Append("\n\n");

@@ -12,12 +12,23 @@ public sealed partial class OfflineChatClient : IChatClient
 {
     private static readonly System.Text.Json.JsonSerializerOptions Compact = new(AIJsonUtilities.DefaultOptions) { WriteIndented = false };
 
+    // Structured output parses strictly (chapter 3): a null field must be present, not left out.
+    private static readonly System.Text.Json.JsonSerializerOptions WithNulls = new(System.Text.Json.JsonSerializerDefaults.Web);
+
     public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var list = messages as IList<ChatMessage> ?? messages.ToList();
         if (options?.Tools is { Count: > 0 } tools)
         {
             return Task.FromResult(WithTools(list, tools));
+        }
+
+        // Chapter 11: the exception workflow's first step asks for this schema. A few rules stand in
+        // for the model, so the workflow, its checks, and the agent eval run with no model.
+        if (options?.ResponseFormat is ChatResponseFormatJson { SchemaName: "ExceptionRequestFacts" })
+        {
+            var request = list.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, ExceptionFacts(request))));
         }
 
         var context = list.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
@@ -96,8 +107,35 @@ public sealed partial class OfflineChatClient : IChatClient
         return null;
     }
 
+    /// <summary>The offline client's reading of an exception request, as JSON for <c>ExceptionRequestFacts</c>.</summary>
+    public static string ExceptionFacts(string request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var policy = PolicyNumber().Match(request) is { Success: true } p ? p.Value.ToUpperInvariant() : null;
+        double? hours = null;
+        if (Hours().Match(request) is { Success: true } h)
+        {
+            var value = double.Parse(h.Groups["n"].Value, System.Globalization.CultureInfo.InvariantCulture);
+            hours = h.Groups["unit"].Value.StartsWith('d') || h.Groups["unit"].Value.StartsWith('D') ? value * 8 : value;
+        }
+
+        var because = request.IndexOf("because", StringComparison.OrdinalIgnoreCase);
+        var reason = (because >= 0 ? request[(because + "because".Length)..] : request).Trim(' ', '.', ',');
+        var sentence = request.Split('.', 2)[0].Trim();
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            policyNumber = policy,
+            request = sentence.Length is >= 3 and <= 200 ? sentence : "A policy exception",
+            requestedHours = hours,
+            reason = reason.Length is >= 3 and <= 400 ? reason : (reason.Length > 400 ? reason[..400] : "Not given"),
+        }, WithNulls);
+    }
+
     [System.Text.RegularExpressions.GeneratedRegex(@"\b[A-Za-z]{2,4}-\d{3}\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex PolicyNumber();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?<n>\d+(\.\d+)?)\s*(?<unit>hours|hrs|hour|h|days|day)\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex Hours();
 
     public object? GetService(Type serviceType, object? serviceKey = null) =>
         serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;

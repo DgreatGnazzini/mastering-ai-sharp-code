@@ -19,6 +19,9 @@ public static partial class PromptLibrary
     public const string RerankPassages = "rerank-passages.v1";
     public const string RewriteQuery = "rewrite-query.v1";
     public const string AssistantTools = "assistant-tools.v1";
+    public const string AgentPolicyAssistant = "agent-policy-assistant.v1";
+    public const string ExceptionUnderstand = "exception-understand.v1";
+    public const string ExceptionDraft = "exception-draft.v1";
 
     private static readonly ConcurrentDictionary<string, string> Cache = new();
 
