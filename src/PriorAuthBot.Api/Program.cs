@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.AI;
@@ -8,6 +9,7 @@ using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
+using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Core.Search;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -127,6 +129,14 @@ api.MapPost("/catalog/search", async (CatalogSearchRequest request, PolicyCatalo
 
     await catalog.EnsureBuiltAsync(Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.Value.Path)), cancellationToken);
     return Results.Ok(await catalog.SearchAsync(request.Query, Math.Clamp(request.Top ?? options.Value.Top, 1, 20), cancellationToken));
+});
+
+// Chapters 6 and 7: permission-aware search, showing what the caller is allowed to retrieve.
+api.MapPost("/search", async (SearchRequest request, ClaimsPrincipal user, CallerIdentityFactory identities, SecureRetriever retriever, CancellationToken cancellationToken) =>
+{
+    var caller = identities.Create(user);
+    var results = await retriever.SearchAsync(request.Query, caller, cancellationToken);
+    return results.Select(r => new SearchHit(r.Record.DocumentId, r.Record.Title, r.Record.Section, Math.Round(r.Score, 3)));
 });
 
 await app.RunAsync();

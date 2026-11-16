@@ -30,10 +30,15 @@
   </ItemGroup>
   <ItemGroup Label="Vector data and retrieval (ch05-ch08)">
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="11.0.0" />
-    <!-- The vector store connectors are still preview packages. -->
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.74.0-preview" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.74.0-preview" />
+    <!--
+      The vector store connectors moved out of Semantic Kernel in 2026: Microsoft.SemanticKernel.Connectors.*
+      is deprecated in favor of the stable CommunityToolkit.VectorData.* packages, which build against
+      Microsoft.Extensions.VectorData.Abstractions 11 (the SK packages break at runtime with it).
+    -->
+    <PackageVersion Include="CommunityToolkit.VectorData.InMemory" Version="1.0.1" />
+    <PackageVersion Include="CommunityToolkit.VectorData.PgVector" Version="1.0.2" />
+    <PackageVersion Include="CommunityToolkit.VectorData.Qdrant" Version="1.0.1" />
+    <PackageVersion Include="CommunityToolkit.VectorData.AzureAISearch" Version="1.0.1" />
   </ItemGroup>
   <ItemGroup Label="Agents (ch09-ch10)">
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />

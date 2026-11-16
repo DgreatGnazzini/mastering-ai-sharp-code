@@ -9,15 +9,17 @@ using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Documents;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
+using PriorAuthBot.Core.Retrieval;
 
 namespace PriorAuthBot.Core;
 
 public static class PriorAuthBotServiceCollectionExtensions
 {
-    /// <summary>Registers everything PriorAuthBot needs, as of chapter 4.</summary>
+    /// <summary>Registers everything PriorAuthBot needs, as of chapter 6.</summary>
     public static IServiceCollection AddPriorAuthBot(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddPriorAuthBotAI(configuration);
+        services.AddPriorAuthBotVectorStore(configuration);
 
         services.AddSingleton<TokenCounter>();
         services.AddSingleton(sp => new QuestionClassifier(sp.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.ClassifierKey)));

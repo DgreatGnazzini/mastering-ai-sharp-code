@@ -34,6 +34,8 @@ The tests need no model, database, or network: they use offline stand-ins. Tests
 
 | Variable | Runs |
 |---|---|
+| `PRIORAUTHBOT_TEST_POSTGRES` | The vector store integration tests against PostgreSQL with pgvector |
+| `PRIORAUTHBOT_TEST_QDRANT` | The same tests against Qdrant |
 | `PRIORAUTHBOT_TEST_OLLAMA` | The live model checks against Ollama |
 
 ## Run PriorAuthBot locally
@@ -77,7 +79,7 @@ Extract a scanned prior authorization form into typed fields, as a claims analys
 curl -X POST http://localhost:5080/intake -H "X-Demo-User: claims" -F "file=@samples/intake/intake-form-001.png;type=image/png"
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md).
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search.
 
 ## Configuration and secrets
 

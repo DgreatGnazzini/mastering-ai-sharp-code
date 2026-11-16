@@ -2,13 +2,15 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.VectorData;
 using PriorAuthBot.Core;
+using PriorAuthBot.Core.Retrieval;
 
 namespace PriorAuthBot.Tests.Infrastructure;
 
 /// <summary>
 /// Builds PriorAuthBot's services the way the API does, from configuration. Defaults to the
-/// offline provider, so tests need no network or model.
+/// offline embedder and the in-memory store, so tests need no network, model, or database.
 /// </summary>
 internal sealed class RagTestHost : IAsyncDisposable
 {
@@ -23,6 +25,10 @@ internal sealed class RagTestHost : IAsyncDisposable
         var settings = new Dictionary<string, string?>
         {
             ["AI:Provider"] = "Offline",
+            ["VectorStore:Provider"] = "InMemory",
+            ["Retrieval:Top"] = "6",
+            // The offline embedder's scores mean little, so tests that need a threshold set their own.
+            ["Retrieval:MinScore"] = "0",
         };
         foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())
         {
@@ -43,6 +49,8 @@ internal sealed class RagTestHost : IAsyncDisposable
 
     public T Get<T>()
         where T : notnull => _services.GetRequiredService<T>();
+
+    public VectorStoreCollection<Guid, ChunkRecord> Collection => Get<VectorStoreCollection<Guid, ChunkRecord>>();
 
     public ValueTask DisposeAsync() => _services.DisposeAsync();
 }

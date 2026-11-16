@@ -6,6 +6,12 @@ namespace PriorAuthBot.Tests.Infrastructure;
 /// </summary>
 internal static class LiveSettings
 {
+    /// <summary>PostgreSQL with pgvector, such as <c>Host=localhost;Database=priorauthbot_test;Username=postgres;Password=postgres</c>.</summary>
+    public static string? Postgres => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_POSTGRES");
+
+    /// <summary>A Qdrant gRPC endpoint as <c>host:port</c>, such as <c>localhost:6334</c>.</summary>
+    public static string? Qdrant => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_QDRANT");
+
     /// <summary>An Ollama endpoint, such as <c>http://localhost:11434</c>, with the chat and embedding models pulled.</summary>
     public static string? Ollama => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_OLLAMA");
 
