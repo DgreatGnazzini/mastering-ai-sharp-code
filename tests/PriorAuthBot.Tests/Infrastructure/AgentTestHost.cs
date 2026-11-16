@@ -15,7 +15,7 @@ internal static class AgentTestHost
     public static readonly Core.Retrieval.CallerIdentity Manager = new("demo-manager", "Grace Lindqvist, RN, nurse manager", ["AllStaff", "Clinical"]);
     public static readonly Core.Retrieval.CallerIdentity Staff = new("demo-staff", "Sam Ortiz", ["AllStaff"]);
     public static readonly Core.Retrieval.CallerIdentity Compliance = new("demo-compliance", "Dana Whitfield", ["AllStaff", "Compliance"]);
-    public static readonly Core.Retrieval.CallerIdentity Hr = new("demo-hr", "Priya Shah", ["AllStaff", "HR"]);
+    public static readonly Core.Retrieval.CallerIdentity Hr = new("demo-hr", "Ingrid Nelson", ["AllStaff", "HR"]);
 
     public static Task<RagTestHost> CreateAsync(MockHrFactory hr, IChatClient model, ManualTimeProvider? clock = null, Action<AgentOptions>? limits = null, Action<IServiceCollection>? configure = null) =>
         ToolTestHost.CreateAsync(hr, model, services =>
