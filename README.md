@@ -30,6 +30,12 @@ dotnet build MasteringAI.slnx
 dotnet test --solution MasteringAI.slnx
 ```
 
+The tests need no model, database, or network: they use offline stand-ins. Tests that need real infrastructure are skipped unless you opt in:
+
+| Variable | Runs |
+|---|---|
+| `PRIORAUTHBOT_TEST_OLLAMA` | The live model checks against Ollama |
+
 ## Run PriorAuthBot locally
 
 With Docker or Podman running, start everything (PostgreSQL with pgvector, Ollama with the models, and the API) from the .NET Aspire AppHost:
@@ -47,11 +53,13 @@ docker compose exec ollama ollama pull llama3.2:3b
 dotnet run --project src/PriorAuthBot.Api
 ```
 
-Count the tokens in a document and estimate what a workload costs (chapter 1):
+In Development, sign in as a demo persona with the `X-Demo-User` header (`nurse`, `contractor`, `claims`, `hr`, `compliance`). Chat with the model directly, streamed as server-sent events (chapter 2):
 
 ```bash
-dotnet run --project tools/PriorAuthBot.TokenCost -- samples/documents/pto-policy.md
+curl -N -X POST http://localhost:5080/chat -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"message":"What is prior authorization?"}'
 ```
+
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md).
 
 ## Configuration and secrets
 

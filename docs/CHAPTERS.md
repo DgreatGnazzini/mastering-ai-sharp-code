@@ -28,3 +28,4 @@ Rules:
 | Tag | README |
 |---|---|
 | `ch01` | [docs/chapters/ch01.md](chapters/ch01.md) |
+| `ch02` | [docs/chapters/ch02.md](chapters/ch02.md) |
