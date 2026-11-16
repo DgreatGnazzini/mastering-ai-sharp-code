@@ -1,0 +1,6 @@
+# Chapter 15: model files are pinned by SHA-256 in models.lock.json, so git must never rewrite their
+# line endings (core.autocrlf on Windows would change every JSON file's hash).
+tests/PriorAuthBot.Tests/LocalModels/tiny-genai-model/** -text
+tests/PriorAuthBot.Tests/Reranker/fake-cross-encoder/** -text
+*.onnx binary
+models.lock.json text eol=lf

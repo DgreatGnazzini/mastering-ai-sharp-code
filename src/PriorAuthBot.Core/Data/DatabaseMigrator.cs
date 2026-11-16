@@ -24,6 +24,13 @@ public sealed class MigrationOptions
     /// the server can run, connected to the <c>postgres</c> database.
     /// </summary>
     public string? AppPrincipalId { get; set; }
+
+    /// <summary>
+    /// Chapter 15: more vector collections to create and grant beside <c>VectorStore:Collection</c>,
+    /// such as the one a new embedding model is being built into. Keep the old one listed until no
+    /// revision reads it.
+    /// </summary>
+    public List<string> Collections { get; set; } = [];
 }
 
 /// <summary>
@@ -37,6 +44,12 @@ public sealed class MigrationOptions
 /// <param name="logger">Where each step is logged.</param>
 public sealed partial class DatabaseMigrator(NpgsqlDataSource dataSource, Func<string, NpgsqlDataSource> forDatabase, ILogger<DatabaseMigrator> logger)
 {
+    /// <summary>
+    /// Chapter 15: the collections to create and grant. The live one, and during an embedding model
+    /// change the one being built beside it (<c>VectorStore:Collection</c> of the new revision).
+    /// </summary>
+    public IReadOnlyList<string> Collections { get; init; } = [VectorStoreServiceCollectionExtensions.CollectionName];
+
     /// <summary>The group role chapter 13's scripts/audit-roles.sql defines for the API.</summary>
     public const string ApiGroupRole = "priorauthbot_api";
 
@@ -59,13 +72,18 @@ public sealed partial class DatabaseMigrator(NpgsqlDataSource dataSource, Func<s
         steps.Add("token ledger");
 
         // 4. The vector index (chapters 6 to 8), created by the connector from ChunkRecord's attributes.
+        //    Chapter 15: the connector only creates a table that is missing, so a column added to
+        //    ChunkRecord later is added here, the one place with the right to ALTER.
         using (var store = new PostgresVectorStore(dataSource, ownsDataSource: false))
         {
-            var collection = store.GetCollection<Guid, ChunkRecord>(VectorStoreServiceCollectionExtensions.CollectionName);
-            await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var name in Collections)
+            {
+                var collection = store.GetCollection<Guid, ChunkRecord>(name);
+                await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
+                await ExecuteAsync($"""ALTER TABLE {QuoteIdentifier(name)} ADD COLUMN IF NOT EXISTS "EmbeddingModel" text NOT NULL DEFAULT '';""", cancellationToken).ConfigureAwait(false);
+                steps.Add($"vector index {name}");
+            }
         }
-
-        steps.Add("vector index");
 
         // 5. The API's group role and its grants. Idempotent: every run leaves the same rights.
         await ExecuteAsync($$"""
@@ -79,7 +97,7 @@ public sealed partial class DatabaseMigrator(NpgsqlDataSource dataSource, Func<s
             GRANT SELECT ON priorauthbot_audit_retention TO {{ApiGroupRole}};
             GRANT SELECT, INSERT, UPDATE ON priorauthbot_token_usage TO {{ApiGroupRole}};
             GRANT SELECT, INSERT ON priorauthbot_spend_alerts TO {{ApiGroupRole}};
-            GRANT SELECT, INSERT, UPDATE, DELETE ON {{VectorStoreServiceCollectionExtensions.CollectionName}} TO {{ApiGroupRole}};
+            GRANT SELECT, INSERT, UPDATE, DELETE ON {{string.Join(", ", Collections.Select(QuoteIdentifier))}} TO {{ApiGroupRole}};
             GRANT USAGE ON SCHEMA public TO {{ApiGroupRole}};
             """, cancellationToken).ConfigureAwait(false);
         steps.Add($"role {ApiGroupRole} and its grants");

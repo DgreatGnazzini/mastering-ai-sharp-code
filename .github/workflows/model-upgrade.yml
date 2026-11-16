@@ -1,0 +1,108 @@
+name: Model upgrade
+
+# Chapter 15: the model comparison on demand. Runs the eval suite on the current Ollama model and on
+# a candidate, each with no answers cached from the other, and writes the side-by-side report that a
+# model upgrade's pull request carries (docs/upgrade-playbook.md). Never changes anything: switching
+# is a pull request that edits the model setting, models.lock.json, and, if the candidate's numbers
+# are accepted, eval/baselines.json, reviewed by CODEOWNERS.
+
+on:
+  workflow_dispatch:
+    inputs:
+      current:
+        description: The model PriorAuthBot uses now (an Ollama tag in models.lock.json)
+        default: llama3.2:3b
+        required: true
+      candidate:
+        description: The model to compare (an Ollama tag; add it to models.lock.json first)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Eval ${{ matrix.role }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        role: [current, candidate]
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PRIORAUTHBOT_TEST_OLLAMA: http://localhost:11434
+      PRIORAUTHBOT_TEST_EMBEDDING_MODEL: nomic-embed-text:v1.5
+      PRIORAUTHBOT_TEST_JUDGE_MODEL: qwen2.5:7b
+      # Inputs reach the shell only through the environment, never inside run: (chapter 14).
+      PRIORAUTHBOT_TEST_CHAT_MODEL: ${{ matrix.role == 'current' && inputs.current || inputs.candidate }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+
+      - name: The model must be in models.lock.json
+        run: |
+          jq -e --arg m "$PRIORAUTHBOT_TEST_CHAT_MODEL" '.models | any(.id == $m)' models.lock.json > /dev/null \
+            || { echo "::error::$PRIORAUTHBOT_TEST_CHAT_MODEL is not in models.lock.json. Add it, with its license reviewed, first."; exit 1; }
+
+      - name: Install Ollama and pull the models
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
+          nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_JUDGE_MODEL"
+          python3 scripts/get-model.py --record-ollama http://localhost:11434
+          git diff models.lock.json || true
+
+      # Both runs are held to the current model's baselines. --no-gate is not used: the candidate's
+      # gate result is part of the evidence, so a failed gate is recorded, not fatal.
+      - name: Eval suite
+        continue-on-error: true
+        run: >-
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release
+          -- --provider Ollama --answers --tools --redteam --latency 8 --out eval-reports --execution upgrade-${{ matrix.role }}-${{ github.run_id }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: eval-${{ matrix.role }}
+          path: eval-reports/
+
+  compare:
+    name: Comparison report
+    needs: eval
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: eval-current
+          path: current
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: eval-candidate
+          path: candidate
+      - name: Compare
+        run: |
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release \
+            -- --compare current/eval-summary-ollama.json candidate/eval-summary-ollama.json --out eval-reports
+          cat eval-reports/model-comparison.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: model-comparison
+          path: eval-reports/model-comparison.md

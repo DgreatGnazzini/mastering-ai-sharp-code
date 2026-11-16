@@ -9,12 +9,22 @@ public sealed class AiOptions
     public const string SectionName = "AI";
 
     /// <summary>
-    /// <c>Ollama</c> (local, the default), <c>AzureOpenAI</c>, <c>OpenAI</c>, or <c>Offline</c>.
-    /// Offline uses a deterministic hashing embedder and no chat model, so tests and CI run with no network.
+    /// <c>Ollama</c> (local, the default), <c>AzureOpenAI</c>, <c>OpenAI</c>, <c>OnnxGenAI</c> (in-process,
+    /// chapter 15), or <c>Offline</c>. Offline uses a deterministic hashing embedder and no chat model,
+    /// so tests and CI run with no network.
     /// </summary>
     public string Provider { get; set; } = "Ollama";
 
     public OllamaOptions Ollama { get; set; } = new();
+
+    /// <summary>Chapter 15: a model that runs inside PriorAuthBot's own process, with ONNX Runtime GenAI.</summary>
+    public OnnxGenAIOptions OnnxGenAI { get; set; } = new();
+
+    /// <summary>
+    /// Chapter 15: hybrid routing. With it on, <see cref="Provider"/> is the hosted model and
+    /// <see cref="RoutingOptions.LocalProvider"/> the local one, and requests that carry PHI go local.
+    /// </summary>
+    public RoutingOptions Routing { get; set; } = new();
 
     public AzureOpenAIOptions AzureOpenAI { get; set; } = new();
 
@@ -43,7 +53,53 @@ public sealed class AiOptions
     /// </summary>
     public bool? ApprovedForPhi { get; set; }
 
-    public bool IsApprovedForPhi => ApprovedForPhi ?? Provider is "Ollama" or "Offline";
+    public bool IsApprovedForPhi => ApprovedForPhi ?? IsLocalProvider(Provider);
+
+    /// <summary>The providers that run on Deductible Dynamics' own machines (chapter 15).</summary>
+    public static bool IsLocalProvider(string provider) => provider is "Ollama" or "OnnxGenAI" or "Offline";
+}
+
+public sealed class OnnxGenAIOptions
+{
+    /// <summary>
+    /// The folder that holds the model: <c>genai_config.json</c>, the ONNX files, and the tokenizer.
+    /// scripts/get-model.py downloads it and checks every file against models.lock.json.
+    /// </summary>
+    public string? ModelPath { get; set; }
+
+    /// <summary>
+    /// The model's entry in models.lock.json. Its file hashes are checked before the model is loaded,
+    /// and its ID is what the reports, the audit log, and the price table call the model.
+    /// </summary>
+    public string ModelId { get; set; } = "phi-4-mini-instruct-onnx-cpu-int4";
+
+    /// <summary>
+    /// models.lock.json, which pins every local model's files by SHA-256. Relative paths are resolved
+    /// from the working directory, then from each parent folder, so the repository's copy is found
+    /// from any project folder.
+    /// </summary>
+    public string LockFile { get; set; } = "models.lock.json";
+
+    /// <summary>Check the files against the lock before loading. Turn off only for a model you are vetting.</summary>
+    public bool VerifyHashes { get; set; } = true;
+
+    /// <summary>The most tokens one answer may have, when the request does not say.</summary>
+    public int MaxOutputTokens { get; set; } = 512;
+
+    /// <summary>
+    /// How many answers the model generates at once. Each one needs its own KV cache in memory, and on
+    /// a CPU two at once are each about half as fast, so the default is one; the rest wait in line.
+    /// </summary>
+    public int MaxConcurrency { get; set; } = 1;
+}
+
+public sealed class RoutingOptions
+{
+    /// <summary>Off by default: one provider answers everything.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>The model PHI goes to: <c>Ollama</c> or <c>OnnxGenAI</c>, configured in their own sections.</summary>
+    public string LocalProvider { get; set; } = "Ollama";
 }
 
 public sealed class OllamaOptions

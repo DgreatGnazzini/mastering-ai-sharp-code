@@ -13,6 +13,7 @@ using PriorAuthBot.Core.Observability;
 using PriorAuthBot.Core.Security;
 using PriorAuthBot.Core.Usage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using PriorAuthBot.Core.LocalModels;
 
 namespace PriorAuthBot.Core.AI;
 
@@ -26,6 +27,11 @@ public static class AiServiceCollectionExtensions
 
     /// <summary>The keyed chat client that can call tools (chapter 10): the main model, with function invocation.</summary>
     public const string ToolsKey = "tools";
+
+    /// <summary>Chapter 15: the keyed branches behind a routing client, such as <c>route:local:chat</c>.</summary>
+    public const string HostedRoutePrefix = "route:hosted:";
+
+    public const string LocalRoutePrefix = "route:local:";
 
     private enum Purpose
     {
@@ -64,25 +70,42 @@ public static class AiServiceCollectionExtensions
                 "OpenAI" => CreateOpenAI(options.OpenAI)
                     .GetEmbeddingClient(options.OpenAI.EmbeddingModel)
                     .AsIEmbeddingGenerator(ChunkDimensions.Size),
-                "Ollama" => CreateOllama(options.Ollama, options.Ollama.EmbeddingModel),
+                // Chapter 15: ONNX Runtime GenAI generates text only, so the embeddings stay local on Ollama.
+                "Ollama" or "OnnxGenAI" => CreateOllama(options.Ollama, options.Ollama.EmbeddingModel),
                 _ => throw new InvalidOperationException($"Unknown AI provider '{options.Provider}'."),
             };
         })
         .UsePriorAuthBotEmbeddingPipeline();
 
-        // The main chat client, plus keyed ones for classification and images. All get the same pipeline.
-        services.AddChatClient(sp => CreateChatClient(sp, Purpose.Chat))
-            .UsePriorAuthBotPipeline();
-        services.AddKeyedChatClient(ClassifierKey, sp => CreateChatClient(sp, Purpose.Classifier))
-            .UsePriorAuthBotPipeline();
-        services.AddKeyedChatClient(VisionKey, sp => CreateChatClient(sp, Purpose.Vision))
-            .UsePriorAuthBotPipeline();
+        // Chapter 15: one in-process model, loaded once (after its files are checked) and shared by
+        // every client that uses it. Only built if a client asks for it.
+        services.TryAddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<AiOptions>>().Value.OnnxGenAI;
+            var lockPath = ModelLock.Find(options.LockFile);
+            var locked = lockPath is null ? null : ModelLock.Load(lockPath).Get(options.ModelId);
+            return new OnnxGenAIChatClient(options, locked);
+        });
 
-        // Chapter 10: the same model, with FunctionInvokingChatClient outermost, so every round trip
+        // The main chat client, plus keyed ones for classification, images, and tools. Chapter 10's
+        // tool client is the same model with FunctionInvokingChatClient outermost, so every round trip
         // of the tool loop passes through the PHI guard, logging, cache, and retries below it.
-        services.AddKeyedChatClient(ToolsKey, sp => CreateChatClient(sp, Purpose.Chat))
-            .UsePriorAuthBotToolInvocation()
-            .UsePriorAuthBotPipeline();
+        // Chapter 15: with routing on, each of them is a router in front of two complete pipelines.
+        var routing = configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.Routing)}:{nameof(RoutingOptions.Enabled)}");
+        AddChatClients(services, key: null, Purpose.Chat, routing, tools: false);
+        AddChatClients(services, ClassifierKey, Purpose.Classifier, routing, tools: false);
+        AddChatClients(services, ToolsKey, Purpose.Chat, routing, tools: true);
+        if (routing)
+        {
+            // Images are treated as PHI (a scan cannot be checked with a pattern), so they always go local.
+            services.AddKeyedChatClient(VisionKey, sp => CreateChatClient(sp, Purpose.Vision, LocalProvider(sp)))
+                .UsePriorAuthBotPipeline(approvedForPhi: true);
+        }
+        else
+        {
+            services.AddKeyedChatClient(VisionKey, sp => CreateChatClient(sp, Purpose.Vision))
+                .UsePriorAuthBotPipeline();
+        }
 
         return services;
     }
@@ -123,11 +146,16 @@ public static class AiServiceCollectionExtensions
     /// cache: with <see cref="AiOptions.CacheResponses"/> on, a cached reply is charged as if the model
     /// had produced it, which over-counts cost and errs on the safe side for a budget.
     /// </remarks>
-    public static ChatClientBuilder UsePriorAuthBotPipeline(this ChatClientBuilder builder)
+    /// <param name="builder">The client's builder.</param>
+    /// <param name="approvedForPhi">
+    /// Chapter 15: whether this pipeline's provider may receive PHI. Null reads it from
+    /// <see cref="AiOptions.IsApprovedForPhi"/>; the local branch of a routing client passes true.
+    /// </param>
+    public static ChatClientBuilder UsePriorAuthBotPipeline(this ChatClientBuilder builder, bool? approvedForPhi = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder
-            .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsApprovedForPhi
+            .Use((inner, sp) => approvedForPhi ?? sp.GetRequiredService<IOptions<AiOptions>>().Value.IsApprovedForPhi
                 ? inner
                 : new PhiGuardChatClient(inner))
             .UsePriorAuthBotGuardrails()
@@ -143,8 +171,14 @@ public static class AiServiceCollectionExtensions
                 sp.GetRequiredService<TokenCounter>(),
                 Logger<MeteringChatClient>(sp)))
             .UseLogging()
+            // Chapter 15: the model is part of the cache key. MEAI's key is the messages and the options,
+            // and the model a client was built with is in neither, so without this a new model is
+            // answered with the old model's cached replies, and its eval measures the old model.
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheResponses
                 ? new DistributedCachingChatClient(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())
+                {
+                    CacheKeyAdditionalValues = [ModelIdentity.Of(inner)],
+                }
                 : inner)
             .Use((inner, sp) => new RetryingChatClient(
                 inner,
@@ -167,6 +201,52 @@ public static class AiServiceCollectionExtensions
             .Use((inner, sp) => sp.GetRequiredService<IOptions<SecurityOptions>>().Value.Guardrails
                 ? new OutputGuardChatClient(inner, sp.GetRequiredService<OutputGuard>(), Logger<OutputGuardChatClient>(sp))
                 : inner);
+    }
+
+    /// <summary>
+    /// Registers one chat client: the configured provider with the full pipeline or, with routing on,
+    /// a <see cref="PhiRoutingChatClient"/> in front of a hosted branch and a local branch, each with
+    /// the full pipeline. The local branch is approved for PHI, so it has no PHI guard; the hosted branch
+    /// keeps the guard unless its provider is approved.
+    /// </summary>
+    private static void AddChatClients(IServiceCollection services, string? key, Purpose purpose, bool routing, bool tools)
+    {
+        if (!routing)
+        {
+            var builder = key is null
+                ? services.AddChatClient(sp => CreateChatClient(sp, purpose))
+                : services.AddKeyedChatClient(key, sp => CreateChatClient(sp, purpose));
+            (tools ? builder.UsePriorAuthBotToolInvocation() : builder).UsePriorAuthBotPipeline();
+            return;
+        }
+
+        var name = key ?? "chat";
+        var hostedKey = HostedRoutePrefix + name;
+        var localKey = LocalRoutePrefix + name;
+        var hosted = services.AddKeyedChatClient(hostedKey, sp => CreateChatClient(sp, purpose));
+        (tools ? hosted.UsePriorAuthBotToolInvocation() : hosted).UsePriorAuthBotPipeline();
+        var local = services.AddKeyedChatClient(localKey, sp => CreateChatClient(sp, purpose, LocalProvider(sp)));
+        (tools ? local.UsePriorAuthBotToolInvocation() : local).UsePriorAuthBotPipeline(approvedForPhi: true);
+
+        IChatClient Router(IServiceProvider sp) => new PhiRoutingChatClient(
+            sp.GetRequiredKeyedService<IChatClient>(hostedKey), sp.GetRequiredKeyedService<IChatClient>(localKey), Logger<PhiRoutingChatClient>(sp));
+        if (key is null)
+        {
+            services.AddChatClient(Router);
+        }
+        else
+        {
+            services.AddKeyedChatClient(key, Router);
+        }
+    }
+
+    private static string LocalProvider(IServiceProvider sp)
+    {
+        var local = sp.GetRequiredService<IOptions<AiOptions>>().Value.Routing.LocalProvider;
+        // Offline counts as local, so the routing tests run with no model at all.
+        return AiOptions.IsLocalProvider(local)
+            ? local
+            : throw new InvalidOperationException($"AI:Routing:LocalProvider is '{local}', which is not a local provider. Use Ollama or OnnxGenAI.");
     }
 
     private static ILogger<T> Logger<T>(IServiceProvider sp) =>
@@ -208,15 +288,23 @@ public static class AiServiceCollectionExtensions
             .UseLogging()
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheEmbeddings
                 ? new DistributedCachingEmbeddingGenerator<string, Embedding<float>>(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())
+                {
+                    // Chapter 15: a vector from one model is meaningless to another, so the model is in the key.
+                    CacheKeyAdditionalValues = [ModelIdentity.Of(inner)],
+                }
                 : inner);
     }
 
-    private static IChatClient CreateChatClient(IServiceProvider sp, Purpose purpose)
+    private static IChatClient CreateChatClient(IServiceProvider sp, Purpose purpose, string? provider = null)
     {
         var options = sp.GetRequiredService<IOptions<AiOptions>>().Value;
-        return options.Provider switch
+        return (provider ?? options.Provider) switch
         {
             "Offline" => new OfflineChatClient(),
+            // Chapter 15: ONNX Runtime GenAI reads text only; images go to the local vision model on Ollama.
+            "OnnxGenAI" when purpose == Purpose.Vision => WithContextLength(
+                CreateOllama(options.Ollama, options.Ollama.VisionModel), options.Ollama.VisionContextLength),
+            "OnnxGenAI" => sp.GetRequiredService<OnnxGenAIChatClient>(),
             "AzureOpenAI" => CreateAzureOpenAI(options.AzureOpenAI, sp.AzureCredential())
                 .GetChatClient(Pick(purpose, options.AzureOpenAI.ClassifierDeployment, options.AzureOpenAI.VisionDeployment, options.AzureOpenAI.ChatDeployment))
                 .AsIChatClient(),
@@ -255,7 +343,8 @@ public static class AiServiceCollectionExtensions
         var policy = new BearerTokenPolicy(credential, AzureIdentity.CognitiveServicesScope);
 
         // The token-policy constructor is still marked experimental in OpenAI 2.x (OPENAI001). It is
-        // the documented way to call Azure OpenAI's v1 endpoint with Entra ID; chapter 15 revisits it.
+        // the documented way to call Azure OpenAI's v1 endpoint with Entra ID. Chapter 15 lists it in
+        // docs/experimental-apis.md, with when to look again.
 #pragma warning disable OPENAI001
         return new OpenAIClient(policy, WithoutSdkRetries(new OpenAIClientOptions { Endpoint = endpoint }));
 #pragma warning restore OPENAI001

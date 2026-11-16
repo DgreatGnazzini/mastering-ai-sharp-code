@@ -227,10 +227,20 @@ jobs:
           key: eval-cache-${{ github.run_id }}
           restore-keys: eval-cache-
 
-      - name: Eval suite with LLM judges, tool, agent, red-team, and operations cases, and the regression gate (chapters 9 to 13)
+      # Chapter 15: the weights Ollama pulled, checked against models.lock.json. Tags are names, not
+      # versions: a tag can point at new weights tomorrow. An entry with no digest yet is recorded and
+      # printed for review (commit it); a digest that differs from the lock fails the job.
+      - name: Check the pulled models against models.lock.json (chapter 15)
+        run: |
+          python3 scripts/get-model.py --record-ollama http://localhost:11434
+          git diff models.lock.json || true
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release -- --verify-models
+
+      - name: Eval suite with LLM judges, tool, agent, red-team, and operations cases, and the regression gate (chapters 9 to 15)
+        # Chapter 15: --latency times 8 answers with no cache, for the model comparison.
         run: >-
           dotnet run --project eval/PriorAuthBot.Eval --configuration Release
-          -- --provider Ollama --answers --tools --agents --redteam --ops --execution ${{ github.sha }}
+          -- --provider Ollama --answers --tools --agents --redteam --ops --latency 8 --execution ${{ github.sha }}
 
       - name: Save the eval cache
         if: always()
@@ -550,3 +560,107 @@ jobs:
         with:
           name: model-canary-reports
           path: eval-reports/canary/
+
+  # ---- Chapter 15: changing models safely.
+
+  local-model:
+    # A candidate model that runs inside the eval's own process with ONNX Runtime GenAI, downloaded
+    # from Hugging Face and checked file by file against models.lock.json, then held to the current
+    # model's bar: the same golden set, judge, embeddings, and red-team attacks, gated against the
+    # Ollama baselines. Its verdict is recorded rather than failing CI: whether to switch is a decision
+    # for a person, with this job's report and the comparison below as the evidence.
+    name: Local model (ONNX Runtime GenAI) against the current baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PRIORAUTHBOT_TEST_OLLAMA: http://localhost:11434
+      PRIORAUTHBOT_TEST_EMBEDDING_MODEL: nomic-embed-text:v1.5
+      PRIORAUTHBOT_TEST_JUDGE_MODEL: qwen2.5:7b
+      PRIORAUTHBOT_TEST_ONNX_MODEL_ID: phi-4-mini-instruct-onnx-cpu-int4
+      PRIORAUTHBOT_TEST_ONNX_MODEL: ${{ github.workspace }}/models/phi-4-mini-instruct-onnx-cpu-int4
+      PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports/local
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+
+      - name: Free disk space for the models
+        run: sudo rm -rf /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
+
+      # A model that is not pinned yet is downloaded at the current commit, and its hashes are
+      # printed as a lock entry to review and commit. A pinned one must match file for file.
+      - name: Download the model and check it against models.lock.json
+        run: |
+          python3 scripts/get-model.py "$PRIORAUTHBOT_TEST_ONNX_MODEL_ID" "$PRIORAUTHBOT_TEST_ONNX_MODEL" --record
+          git diff models.lock.json || true
+          du -sh "$PRIORAUTHBOT_TEST_ONNX_MODEL"
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release -- --verify-models --onnx "$PRIORAUTHBOT_TEST_ONNX_MODEL" --require-license
+
+      - name: Install Ollama for the embeddings and the judge
+        run: |
+          curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
+          nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_JUDGE_MODEL"
+          free -h
+
+      - name: Eval and red-team gates on the local model, against the Ollama baselines
+        id: gate
+        continue-on-error: true
+        run: >-
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release
+          -- --provider OnnxGenAI --baseline-provider Ollama --answers --redteam --latency 8
+          --out eval-reports/local --execution local-${{ github.sha }}
+
+      - name: Gate verdict
+        if: always()
+        run: |
+          echo "Candidate $PRIORAUTHBOT_TEST_ONNX_MODEL_ID gate against the Ollama baselines: ${{ steps.gate.outcome }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          cat eval-reports/local/*.md || true
+          cat eval-reports/local/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: local-model-reports
+          path: eval-reports/local/
+
+  model-comparison:
+    # The current model (the RAG eval job) and the candidate side by side: every metric with its
+    # change and a verdict at the gate's tolerances, latency and cost, and each model's provenance
+    # from models.lock.json. The evidence a model upgrade's pull request carries.
+    name: Model comparison (current and candidate)
+    needs: [rag-eval, local-model]
+    if: always() && needs.rag-eval.result != 'skipped' && needs.local-model.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: rag-eval-reports
+          path: current
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: local-model-reports
+          path: candidate
+
+      - name: Compare
+        run: |
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release \
+            -- --compare current/eval-summary-ollama.json candidate/eval-summary-onnxgenai.json --out eval-reports
+          cat eval-reports/model-comparison.md >> "$GITHUB_STEP_SUMMARY"

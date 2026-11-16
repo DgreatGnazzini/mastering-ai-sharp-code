@@ -79,6 +79,14 @@ public sealed class ChunkRecord
     [VectorStoreData(IsIndexed = true)]
     public bool ContainsPhi { get; set; }
 
+    /// <summary>
+    /// Chapter 15: the embedding model that made <see cref="Embedding"/>, as <see cref="AI.ModelIdentity"/>
+    /// names it (<c>ollama/nomic-embed-text:v1.5@768</c>). Retrieval refuses a chunk from another model,
+    /// because its score against this model's query vector means nothing.
+    /// </summary>
+    [VectorStoreData]
+    public string EmbeddingModel { get; set; } = string.Empty;
+
     [VectorStoreVector(ChunkDimensions.Size, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw)]
     public ReadOnlyMemory<float> Embedding { get; set; }
 

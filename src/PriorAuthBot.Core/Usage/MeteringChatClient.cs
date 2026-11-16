@@ -104,6 +104,11 @@ public sealed partial class MeteringChatClient(
         Activity.Current?.SetTag("priorauthbot.cost_usd", (double)cost);
 
         request?.RecordUsage(input, output, cost);
+
+        // Chapter 15: which model this was, for the audit record. The provider comes from the client,
+        // the model from the response when it names one (a deployment can be upgraded under its name).
+        var provider = ((IChatClient)this).GetService<ChatClientMetadata>()?.ProviderName;
+        request?.RecordModel(ModelIdentity.Format(provider, model));
         // CancellationToken.None: the model has already been paid for, so the charge is recorded even if the caller has gone.
         foreach (var threshold in await ledger.ChargeAsync(request?.UserId ?? BackgroundUser, input, output, cost, CancellationToken.None).ConfigureAwait(false))
         {

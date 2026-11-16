@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Caching;
 using PriorAuthBot.Core.Observability;
 using PriorAuthBot.Core.Prompts;
@@ -83,7 +84,15 @@ public sealed partial class RagAnswerService(
         }
 
         var messages = BuildMessages(question, context);
-        var response = await chatClient.GetResponseAsync(messages, new ChatOptions { Temperature = 0 }, cancellationToken).ConfigureAwait(false);
+        var chatOptions = new ChatOptions { Temperature = 0 };
+        if (context.Sources.Any(s => s.Record.ContainsPhi))
+        {
+            // Chapter 15: a source marked phi: true makes the whole prompt PHI. With hybrid routing on,
+            // this flag sends it to the local model; without routing, nothing reads it.
+            PhiRouting.Flag(chatOptions);
+        }
+
+        var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
         var text = response.Text.Trim();
 
         if (text.Length == 0 || text.Contains("I don't know", StringComparison.OrdinalIgnoreCase))

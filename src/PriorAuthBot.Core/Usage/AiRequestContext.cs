@@ -41,6 +41,7 @@ public sealed class AiRequestContext
     private long _outputTokens;
     private decimal _cost;
     private int _modelCalls;
+    private readonly List<string> _models = [];
 
     private AiRequestContext(string auditId, string operation, string userId, string displayName)
     {
@@ -174,6 +175,33 @@ public sealed class AiRequestContext
             lock (_gate)
             {
                 return [.. _documents.Values.OrderBy(d => d.DocumentId, StringComparer.Ordinal)];
+            }
+        }
+    }
+
+    /// <summary>
+    /// Chapter 15: the models that answered this request, as <c>provider/model</c>, in the order they
+    /// were first used. With routing on, this is how the audit log says which model saw a question.
+    /// </summary>
+    public IReadOnlyList<string> Models
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _models];
+            }
+        }
+    }
+
+    public void RecordModel(string model)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        lock (_gate)
+        {
+            if (!_models.Contains(model, StringComparer.Ordinal))
+            {
+                _models.Add(model);
             }
         }
     }
