@@ -44,7 +44,7 @@ public sealed class TokenBudgetTests
         var model = new UsageReportingClient(input: 1_000, output: 100);
         var (client, _) = Metered(new UsageOptions { DailyTokensPerUser = 1_000 }, model);
 
-        using var scope = AiRequestContext.Begin("POST /ask", "demo-hr", "Priya");
+        using var scope = AiRequestContext.Begin("POST /ask", "demo-hr", "Ingrid");
         await client.GetResponseAsync("first", cancellationToken: Ct);
         await Assert.ThrowsAsync<TokenQuotaExceededException>(() => client.GetResponseAsync("second", cancellationToken: Ct));
 
@@ -56,7 +56,7 @@ public sealed class TokenBudgetTests
     {
         var (client, _) = Metered(new UsageOptions { DailyTokensPerUser = 1_000 });
 
-        using (AiRequestContext.Begin("POST /ask", "demo-hr", "Priya"))
+        using (AiRequestContext.Begin("POST /ask", "demo-hr", "Ingrid"))
         {
             await client.GetResponseAsync("first", cancellationToken: Ct);
             await Assert.ThrowsAsync<TokenQuotaExceededException>(() => client.GetResponseAsync("second", cancellationToken: Ct));
@@ -83,7 +83,7 @@ public sealed class TokenBudgetTests
         var time = new ManualTimeProvider { Now = new DateTimeOffset(2026, 11, 15, 23, 59, 0, TimeSpan.Zero) };
         var (client, ledger) = Metered(new UsageOptions { DailyTokensPerUser = 1_000 }, time: time);
 
-        using var scope = AiRequestContext.Begin("POST /ask", "demo-hr", "Priya");
+        using var scope = AiRequestContext.Begin("POST /ask", "demo-hr", "Ingrid");
         await client.GetResponseAsync("first", cancellationToken: Ct);
         var refused = await Assert.ThrowsAsync<TokenQuotaExceededException>(() => client.GetResponseAsync("second", cancellationToken: Ct));
         Assert.Equal(new DateTimeOffset(2026, 11, 16, 0, 0, 0, TimeSpan.Zero), refused.ResetsAt);
