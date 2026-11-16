@@ -278,9 +278,9 @@ internal static class ModelComparison
 
 /// <summary>
 /// Chapter 15: checks every local model against models.lock.json, then exits:
-///   dotnet run --project eval/PriorAuthBot.Eval -- --verify-models [--onnx DIR]
+///   dotnet run --project eval/PriorAuthBot.Eval -- --verify-models [--ollama NAME]... [--onnx DIR]
 /// Ollama models are checked by digest against PRIORAUTHBOT_TEST_OLLAMA; an ONNX model folder by
-/// file hashes. Exit code 1 means a model did not match, or is not in the lock. A license that does not
+/// file hashes. With --onnx and no --ollama, only the folder is checked. Exit code 1 means a model did not match, or is not in the lock. A license that does not
 /// allow commercial use is reported; add --require-license (as production does) to fail on it too.
 /// </summary>
 internal static class VerifyModels
@@ -291,7 +291,10 @@ internal static class VerifyModels
         var locks = ModelLock.Load(lockPath);
         var results = new List<ModelVerification>();
         var requireLicense = args.Contains("--require-license");
-        if (EvalSettings.OllamaEndpoint is { } endpoint)
+        var o = Array.IndexOf(args, "--onnx");
+
+        // With --onnx alone, only that folder is checked: the job that runs it may have no Ollama yet.
+        if (EvalSettings.OllamaEndpoint is { } endpoint && (o < 0 || args.Contains("--ollama")))
         {
             using var http = new HttpClient { BaseAddress = new Uri(endpoint), Timeout = TimeSpan.FromSeconds(30) };
             var wanted = args.Where((a, i) => i > 0 && args[i - 1] == "--ollama").ToHashSet(StringComparer.Ordinal);
@@ -299,7 +302,6 @@ internal static class VerifyModels
             results.AddRange(await OllamaModelCheck.VerifyAsync(http, models, requireLicense));
         }
 
-        var o = Array.IndexOf(args, "--onnx");
         if (o >= 0 && o + 1 < args.Length)
         {
             var id = EvalSettings.OnnxModelId;

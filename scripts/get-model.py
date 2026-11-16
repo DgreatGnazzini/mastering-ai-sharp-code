@@ -134,7 +134,10 @@ def main(argv):
     recorded, problems = [], []
     for item in sorted(files, key=lambda t: t["path"]):
         name = item["path"][len(folder):].lstrip("/") if folder else item["path"]
-        if name.lower().endswith((".md", ".gitattributes")) or name.lower() == "license":
+        # Documentation is not loaded, so it is not pinned. Neither is Python: a .py file in a model
+        # repository is code for the transformers library (trust_remote_code), which ONNX Runtime
+        # GenAI never runs. It is not downloaded either, so nothing can run it by accident.
+        if name.lower().endswith((".md", ".gitattributes", ".py")) or name.lower() == "license":
             continue
         if pinned and name not in expected:
             problems.append(f"{name} is in the repository but not in the lock.")
