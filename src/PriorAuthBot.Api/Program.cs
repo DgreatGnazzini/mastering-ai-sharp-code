@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication;
 using PriorAuthBot.Api;
 using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Core;
+using PriorAuthBot.Core.AI;
+using PriorAuthBot.Core.Classification;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +79,21 @@ var api = app.MapGroup("/").RequireAuthorization().RequireRateLimiting(UserRateL
 
 // Chapter 2: chat straight to the model, streamed as server-sent events. No documents involved.
 api.MapPost("/chat", ChatEndpoint.HandleAsync);
+
+// Chapter 3: classify a question into a typed intent, and decide where it goes.
+api.MapPost("/classify", async (ClassifyRequest request, QuestionClassifier classifier, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var intent = await classifier.ClassifyAsync(request.Question, cancellationToken);
+        return Results.Ok(new ClassifyResponse(intent, QuestionRouter.Route(intent)));
+    }
+    catch (StructuredOutputException)
+    {
+        // The model's output never reached the caller unvalidated, and neither does the raw reply.
+        return Results.Problem("The model did not return a valid classification.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
 
 await app.RunAsync();
 

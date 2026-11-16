@@ -13,4 +13,7 @@
     <ProjectReference Include="..\..\src\PriorAuthBot.Core\PriorAuthBot.Core.csproj" />
     <ProjectReference Include="..\..\src\PriorAuthBot.Api\PriorAuthBot.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="GoldenSet\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

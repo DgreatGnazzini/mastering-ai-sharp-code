@@ -10,6 +10,9 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Prompts\Templates\*.md;Prompts\Templates\*.json" LogicalName="PriorAuthBot.Core.Prompts.Templates.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="PriorAuthBot.Tests" />
   </ItemGroup>
 </Project>

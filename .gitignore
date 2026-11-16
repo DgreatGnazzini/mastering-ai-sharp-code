@@ -432,3 +432,6 @@ appsettings.Development.json
 # PriorAuthBot's Development settings hold only demo personas and fake group IDs, never secrets,
 # and the tests need them. Secrets go in user secrets.
 !src/PriorAuthBot.Api/appsettings.Development.json
+
+# Snapshot tests write this on a mismatch (chapter 3)
+*.received.txt

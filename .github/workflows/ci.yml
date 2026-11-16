@@ -55,7 +55,7 @@ jobs:
           fi
 
   rag-eval:
-    # Live checks against a real local model (Ollama). Chapter 2: streaming latency.
+    # Live checks against a real local model (Ollama). Chapter 2: streaming latency. Chapter 3: the labeled classification questions.
     # CPU only, so it takes several minutes.
     name: Live model checks (Ollama)
     runs-on: ubuntu-latest
@@ -91,6 +91,12 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveChatTests" --output Detailed
+
+      - name: Classify the labeled questions (chapter 3)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveClassifierTests" --output Detailed
 
       - name: Add the reports to the job summary
         if: always()

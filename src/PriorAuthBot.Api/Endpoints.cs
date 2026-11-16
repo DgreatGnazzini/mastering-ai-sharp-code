@@ -1,6 +1,12 @@
+using PriorAuthBot.Core.Classification;
+
 namespace PriorAuthBot.Api;
 
 public sealed record ChatRequest(string Message);
+
+public sealed record ClassifyRequest(string Question);
+
+public sealed record ClassifyResponse(QuestionIntent Intent, QuestionRoute Route);
 
 /// <summary>Per-user request limits for every model-backed endpoint (chapter 2).</summary>
 public sealed class UserRateLimitOptions

@@ -59,6 +59,12 @@ In Development, sign in as a demo persona with the `X-Demo-User` header (`nurse`
 curl -N -X POST http://localhost:5080/chat -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"message":"What is prior authorization?"}'
 ```
 
+Classify a question into department, sensitivity, and a PHI flag (chapter 3):
+
+```bash
+curl -X POST http://localhost:5080/classify -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"How many PTO days do I get?"}'
+```
+
 No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md).
 
 ## Configuration and secrets
