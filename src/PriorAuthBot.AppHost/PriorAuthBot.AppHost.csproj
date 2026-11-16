@@ -1,0 +1,19 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+  <!--
+    Local development for PriorAuthBot (chapter 1): PostgreSQL with pgvector and Ollama in
+    containers, and the API wired to both. See docs/chapters/ch01.md to run it.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>mastering-ai-sharp-apphost</UserSecretsId>
+    <!-- The Aspire CLI bundle is optional; dotnet run is enough for this book. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PriorAuthBot.Api\PriorAuthBot.Api.csproj" />
+  </ItemGroup>
+</Project>

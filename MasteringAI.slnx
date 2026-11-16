@@ -1,9 +1,14 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/PriorAuthBot.Api/PriorAuthBot.Api.csproj" />
+    <Project Path="src/PriorAuthBot.AppHost/PriorAuthBot.AppHost.csproj" />
     <Project Path="src/PriorAuthBot.Core/PriorAuthBot.Core.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/PriorAuthBot.TokenCost/PriorAuthBot.TokenCost.csproj" />
+  </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/PriorAuthBot.AppHost.Tests/PriorAuthBot.AppHost.Tests.csproj" />
     <Project Path="tests/PriorAuthBot.Tests/PriorAuthBot.Tests.csproj" />
   </Folder>
 </Solution>
