@@ -22,6 +22,54 @@ internal sealed record EvalSettings(
     public const string Offline = "Offline";
     public const string Ollama = "Ollama";
 
+    /// <summary>
+    /// Chapter 14: Azure OpenAI, for the eval job that runs inside the deployment's virtual network
+    /// against the model deployment a new revision will use. Signed in with the job's managed identity.
+    /// </summary>
+    public const string AzureOpenAI = "AzureOpenAI";
+
+    /// <summary>A real model answers, so calls are slow, cached on disk, and judged.</summary>
+    public bool IsLive => Provider != Offline;
+
+    public static string? AzureEndpoint => Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_AZURE_OPENAI_ENDPOINT");
+
+    public static string AzureChatDeployment => Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_CHAT_DEPLOYMENT") ?? "gpt-4.1-mini";
+
+    public static string AzureEmbeddingDeployment => Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_EMBEDDING_DEPLOYMENT") ?? "text-embedding-3-small";
+
+    public static string AzureJudgeDeployment => Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_JUDGE_DEPLOYMENT") ?? AzureChatDeployment;
+
+    /// <summary>The minimum similarity for this embedding model. text-embedding-3-small scores lower than nomic-embed-text; calibrate it on the first run.</summary>
+    public static string? AzureMinScore => Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_MIN_SCORE");
+
+    /// <summary>The model that answers, as the reports name it.</summary>
+    public string AnsweringModel => Provider switch
+    {
+        Ollama => ChatModel,
+        AzureOpenAI => AzureChatDeployment,
+        _ => "offline",
+    };
+
+    /// <summary>The model that judges answers, as the reports name it.</summary>
+    public string JudgingModel => Provider == AzureOpenAI ? AzureJudgeDeployment : JudgeModel;
+
+    /// <summary>The LLM judge's chat client, for a live provider.</summary>
+    public Microsoft.Extensions.AI.IChatClient CreateJudge() => Provider switch
+    {
+        Ollama => new OllamaSharp.OllamaApiClient(
+            new HttpClient { BaseAddress = new Uri(OllamaEndpoint!), Timeout = TimeSpan.FromMinutes(10) }, JudgeModel),
+        AzureOpenAI => Microsoft.Extensions.AI.OpenAIClientExtensions.AsIChatClient(Core.AI.AiServiceCollectionExtensions
+            .CreateAzureOpenAI(new Core.AI.AzureOpenAIOptions { Endpoint = new Uri(AzureEndpoint!) }, Core.Hosting.AzureIdentity.CreateCredential(AzureIdentityFromEnvironment()))
+            .GetChatClient(AzureJudgeDeployment)),
+        _ => throw new InvalidOperationException("The offline provider has no judge."),
+    };
+
+    private static Core.Hosting.AzureIdentityOptions AzureIdentityFromEnvironment() => new()
+    {
+        ManagedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID"),
+        TenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID"),
+    };
+
     public static string? OllamaEndpoint => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_OLLAMA");
 
     public static string ChatModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_CHAT_MODEL") ?? "llama3.2:3b";
@@ -42,9 +90,9 @@ internal sealed record EvalSettings(
         }
 
         var provider = Value("--provider") ?? Offline;
-        if (provider is not (Offline or Ollama))
+        if (provider is not (Offline or Ollama or AzureOpenAI))
         {
-            throw new ArgumentException($"--provider must be {Offline} or {Ollama}, not '{provider}'.");
+            throw new ArgumentException($"--provider must be {Offline}, {Ollama}, or {AzureOpenAI}, not '{provider}'.");
         }
 
         return new EvalSettings(
@@ -74,6 +122,19 @@ internal sealed record EvalSettings(
         {
             settings["AI:Provider"] = "Offline";
             settings["Retrieval:MinScore"] = set.Offline.MinScore.ToString(CultureInfo.InvariantCulture);
+        }
+        else if (Provider == AzureOpenAI)
+        {
+            var identity = AzureIdentityFromEnvironment();
+            settings["AI:Provider"] = "AzureOpenAI";
+            settings["AI:AzureOpenAI:Endpoint"] = AzureEndpoint ?? throw new InvalidOperationException("Set PRIORAUTHBOT_EVAL_AZURE_OPENAI_ENDPOINT to the Azure OpenAI v1 endpoint.");
+            settings["AI:AzureOpenAI:ChatDeployment"] = AzureChatDeployment;
+            settings["AI:AzureOpenAI:EmbeddingDeployment"] = AzureEmbeddingDeployment;
+            settings["Azure:ManagedIdentityClientId"] = identity.ManagedIdentityClientId;
+            settings["Azure:TenantId"] = identity.TenantId;
+            settings["Retrieval:MinScore"] = AzureMinScore ?? set.Ollama.MinScore.ToString(CultureInfo.InvariantCulture);
+            settings["AI:CacheResponses"] = "true";
+            settings["AI:CacheEmbeddings"] = "true";
         }
         else
         {

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "location": { "value": "${AZURE_LOCATION}" },
+    "principalId": { "value": "${AZURE_PRINCIPAL_ID}" },
+    "apiClientId": { "value": "${PRIORAUTHBOT_API_CLIENT_ID}" },
+    "apiImage": { "value": "${API_IMAGE=mcr.microsoft.com/dotnet/samples:aspnetapp-chiseled}" },
+    "stableRevision": { "value": "${STABLE_REVISION=}" },
+    "chatDeployment": { "value": "${CHAT_DEPLOYMENT=gpt-4-1-mini-2025-04-14}" },
+    "alertEmail": { "value": "${ALERT_EMAIL=}" },
+    "zoneRedundant": { "value": "${ZONE_REDUNDANT=false}" }
+  }
+}

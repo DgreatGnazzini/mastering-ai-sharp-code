@@ -42,10 +42,14 @@ public sealed class McpProtectedResourceTests(McpProtectedResourceTests.EntraFac
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Production");
-            builder.UseSetting("Auth:Mode", "Entra");
+
+            // Chapter 14: Production starts only with a deployable configuration.
+            foreach (var (key, value) in Deployment.ProductionSettings.Valid())
+            {
+                builder.UseSetting(key, value);
+            }
+
             builder.UseSetting("Auth:JwtBearer:Authority", Authority);
-            builder.UseSetting("AI:Provider", "Offline");
-            builder.UseSetting("VectorStore:Provider", "InMemory");
             builder.UseSetting("Ingestion:DocumentsPath", TestPaths.SampleDocuments);
         }
     }

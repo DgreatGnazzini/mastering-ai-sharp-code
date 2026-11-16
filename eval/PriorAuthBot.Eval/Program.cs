@@ -15,6 +15,8 @@ namespace PriorAuthBot.Eval;
 ///   add --agents for chapter 11's agent cases (the exception workflow and policy agent conversations)
 ///   add --redteam for chapter 12's attacks, run with the guardrails and again without them
 ///   add --ops for chapter 13: audit completeness, telemetry content, tokens and cost, and the answer cache
+///   --provider AzureOpenAI runs the same suite against an Azure OpenAI deployment (chapter 14)
+///   --smoke URL [--expect-revision SHA] checks a running revision's probes and sign-in (chapter 14)
 /// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
 /// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
 /// </summary>
@@ -22,12 +24,25 @@ internal static class EvalProgram
 {
     public static async Task<int> Main(string[] args)
     {
+        // Chapter 14: in a Container Apps job, the pipeline passes the arguments as one environment
+        // variable, because `az containerapp job start --args` would read "--smoke" as its own option.
+        if (args.Length == 0 && Environment.GetEnvironmentVariable("PRIORAUTHBOT_EVAL_ARGS") is { Length: > 0 } fromEnvironment)
+        {
+            args = fromEnvironment.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        // Chapter 14: the deploy pipeline's smoke test against a running revision, then exit.
+        if (args.Contains("--smoke"))
+        {
+            return await SmokeTest.RunAsync(args);
+        }
+
         var settings = EvalSettings.Parse(args);
         var set = GoldenSet.Load();
         var leaks = await LeakageChecker.ForSamplesAsync();
         Directory.CreateDirectory(settings.ReportDirectory);
-        var cache = settings.Provider == EvalSettings.Ollama ? new FileDistributedCache(Path.Combine(settings.CacheDirectory, "app")) : null;
-        Console.WriteLine($"Golden set: {set.Cases.Count} questions, {set.Cases.Count(c => c.IsPermissionCase)} permission cases. Provider: {settings.Provider}.");
+        var cache = settings.IsLive ? new FileDistributedCache(Path.Combine(settings.CacheDirectory, "app")) : null;
+        Console.WriteLine($"Golden set: {set.Cases.Count} questions, {set.Cases.Count(c => c.IsPermissionCase)} permission cases. Provider: {settings.Provider}, model: {settings.AnsweringModel}.");
 
         // 1. Retrieval, chapter 7 against chapter 8, on every question.
         var runs = new List<RetrievalRun>();
@@ -58,27 +73,26 @@ internal static class EvalProgram
             await host.IngestSamplesAsync();
 
             ReportingConfiguration? judged = null;
-            OllamaSharp.OllamaApiClient? judgeClient = null;
+            Microsoft.Extensions.AI.IChatClient? judgeClient = null;
             var cases = set.Cases.AsEnumerable();
-            if (settings.Provider == EvalSettings.Ollama)
+            if (settings.IsLive)
             {
                 // Every permission case (a decline costs no model call) and the judged sample. The other
                 // answerable questions are measured by retrieval: a model call each would double the job's time.
                 cases = cases.Where(c => c.IsPermissionCase || c.ExpectDecline || c.AnswerEval);
-                judgeClient = new OllamaSharp.OllamaApiClient(
-                    new HttpClient { BaseAddress = new Uri(EvalSettings.OllamaEndpoint!), Timeout = TimeSpan.FromMinutes(10) }, EvalSettings.JudgeModel);
+                judgeClient = settings.CreateJudge();
                 judged = DiskBasedReportingConfiguration.Create(
                     storageRootPath: Path.Combine(settings.CacheDirectory, "aieval"),
                     evaluators: AnswerEvaluation.Evaluators(),
                     chatConfiguration: new ChatConfiguration(judgeClient),
                     enableResponseCaching: true,
                     executionName: settings.ExecutionName,
-                    tags: [$"chat:{EvalSettings.ChatModel}", $"judge:{EvalSettings.JudgeModel}"]);
+                    tags: [$"chat:{settings.AnsweringModel}", $"judge:{settings.JudgingModel}"]);
             }
 
             var answers = await AnswerEvaluation.RunAsync(host, set, cases.ToList(), leaks, judged, Console.WriteLine);
             answerSummary = AnswerSummary.Of(answers);
-            var answerReport = Reports.Answers(settings.Provider, judged is null ? null : EvalSettings.JudgeModel, answers);
+            var answerReport = Reports.Answers(settings.Provider, judged is null ? null : settings.JudgingModel, answers);
             await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-answers-{settings.Provider.ToLowerInvariant()}.md"), answerReport);
             Console.WriteLine(answerReport);
 
@@ -129,7 +143,7 @@ internal static class EvalProgram
             await using (var host = EvalHost.Create(settings.Configuration(set), cache, configure: s =>
             {
                 ToolEvaluation.Configure(s, owned);
-                AgentEvaluation.Configure(s, slowModel: settings.Provider == EvalSettings.Ollama);
+                AgentEvaluation.Configure(s, slowModel: settings.IsLive);
             }))
             {
                 await host.IngestSamplesAsync();
@@ -158,7 +172,7 @@ internal static class EvalProgram
                 var owned = new List<IAsyncDisposable>();
                 var config = settings.Configuration(set);
                 config["Security:Guardrails"] = guardrails ? "true" : "false";
-                await using (var host = EvalHost.Create(config, cache, configure: s => RedTeamEvaluation.Configure(s, owned, slowModel: settings.Provider == EvalSettings.Ollama)))
+                await using (var host = EvalHost.Create(config, cache, configure: s => RedTeamEvaluation.Configure(s, owned, slowModel: settings.IsLive)))
                 {
                     await RedTeamEvaluation.IngestAsync(host);
                     Console.WriteLine($"Red team, guardrails {(guardrails ? "on" : "off")}:");

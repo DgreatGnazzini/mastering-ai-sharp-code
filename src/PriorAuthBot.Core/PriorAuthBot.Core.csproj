@@ -13,6 +13,7 @@
     <PackageReference Include="OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="PdfPig" />
     <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="Azure.AI.DocumentIntelligence" />
