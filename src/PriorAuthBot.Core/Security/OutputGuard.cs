@@ -28,7 +28,10 @@ public sealed partial class OutputGuard(SecurityOptions options)
     /// <param name="answer">The model's text.</param>
     /// <param name="systemPrompts">The system messages of the request.</param>
     /// <param name="ground">Everything else the model was given: the user's words, sources, and tool results.</param>
-    public OutputCheck Check(string answer, IEnumerable<string> systemPrompts, string ground)
+    /// <param name="groundIsComplete">False when the request also held content that is not text, such as
+    /// an image: identifiers read from it cannot be checked against <paramref name="ground"/>, so only
+    /// SSNs are redacted.</param>
+    public OutputCheck Check(string answer, IEnumerable<string> systemPrompts, string ground, bool groundIsComplete = true)
     {
         ArgumentNullException.ThrowIfNull(answer);
         ArgumentNullException.ThrowIfNull(systemPrompts);
@@ -39,7 +42,7 @@ public sealed partial class OutputGuard(SecurityOptions options)
             return new OutputCheck(SystemPromptRefusal, true, 0, empty);
         }
 
-        var redacted = PhiRedactor.RedactUngrounded(answer, ground);
+        var redacted = PhiRedactor.RedactUngrounded(answer, ground, groundIsComplete);
         var markdown = MarkdownSanitizer.Sanitize(redacted.Text, options.AllowedLinkHosts);
         return new OutputCheck(markdown.Text, false, redacted.Total, markdown);
     }

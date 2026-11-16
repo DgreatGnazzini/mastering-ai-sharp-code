@@ -46,6 +46,9 @@
         "Exception outcome": 1.0,
         "Exception hours": 1.0,
         "Conversation tools": 0.86
+      },
+      "redTeam": {
+        "Measured breaches": 0
       }
     }
   }

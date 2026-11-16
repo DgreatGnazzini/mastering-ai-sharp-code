@@ -23,9 +23,9 @@ public sealed partial class OutputGuardChatClient(IChatClient innerClient, Outpu
     {
         var list = messages as IList<ChatMessage> ?? messages.ToList();
         var response = await base.GetResponseAsync(list, options, cancellationToken).ConfigureAwait(false);
-        var (system, ground) = Split(list);
+        var (system, ground, complete) = Split(list);
 
-        var whole = guard.Check(response.Text, system, ground);
+        var whole = guard.Check(response.Text, system, ground, complete);
         if (whole.SystemPromptLeak)
         {
             LogChanged(logger, "system prompt leak", 0, 0, 0);
@@ -36,7 +36,7 @@ public sealed partial class OutputGuardChatClient(IChatClient innerClient, Outpu
         var markdown = new SanitizeResult(string.Empty, 0, 0, 0);
         var result = Replace(response, text =>
         {
-            var check = guard.Check(text, system, ground);
+            var check = guard.Check(text, system, ground, complete);
             redacted += check.IdentifiersRedacted;
             markdown = new SanitizeResult(string.Empty, markdown.ImagesRemoved + check.Markdown.ImagesRemoved, markdown.LinksRemoved + check.Markdown.LinksRemoved, markdown.HtmlRemoved + check.Markdown.HtmlRemoved);
             return check.Text;
@@ -52,7 +52,7 @@ public sealed partial class OutputGuardChatClient(IChatClient innerClient, Outpu
     public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var list = messages as IList<ChatMessage> ?? messages.ToList();
-        var (system, ground) = Split(list);
+        var (system, ground, complete) = Split(list);
         var pending = new StringBuilder();
         var sent = new StringBuilder();
         ChatResponseUpdate? template = null;
@@ -73,14 +73,14 @@ public sealed partial class OutputGuardChatClient(IChatClient innerClient, Outpu
             if (ready is not null)
             {
                 sent.Append(ready);
-                if (guard.Check(sent.ToString(), system, ground).SystemPromptLeak)
+                if (guard.Check(sent.ToString(), system, ground, complete).SystemPromptLeak)
                 {
                     LogChanged(logger, "system prompt leak", 0, 0, 0);
                     yield return Text(update, "\n" + OutputGuard.SystemPromptRefusal);
                     yield break;
                 }
 
-                yield return Text(update, guard.Check(ready, system, ground).Text, others);
+                yield return Text(update, guard.Check(ready, system, ground, complete).Text, others);
             }
             else if (others.Count > 0 || update.FinishReason is not null)
             {
@@ -91,15 +91,18 @@ public sealed partial class OutputGuardChatClient(IChatClient innerClient, Outpu
         if (pending.Length > 0 && template is not null)
         {
             sent.Append(pending);
-            yield return guard.Check(sent.ToString(), system, ground).SystemPromptLeak
+            yield return guard.Check(sent.ToString(), system, ground, complete).SystemPromptLeak
                 ? Text(template, "\n" + OutputGuard.SystemPromptRefusal)
-                : Text(template, guard.Check(pending.ToString(), system, ground).Text);
+                : Text(template, guard.Check(pending.ToString(), system, ground, complete).Text);
         }
     }
 
-    private static (List<string> System, string Ground) Split(IList<ChatMessage> messages)
+    // Ground is everything the model read apart from the system prompt. An image or file in the request
+    // (a scanned intake form, chapter 4) is something the model read that the ground text cannot show.
+    private static (List<string> System, string Ground, bool Complete) Split(IList<ChatMessage> messages)
     {
         var system = messages.Where(m => m.Role == ChatRole.System).Select(m => m.Text).ToList();
+        var complete = !messages.SelectMany(m => m.Contents).Any(c => c is DataContent or UriContent);
         var ground = new StringBuilder();
         foreach (var message in messages.Where(m => m.Role != ChatRole.System))
         {
@@ -115,7 +118,7 @@ public sealed partial class OutputGuardChatClient(IChatClient innerClient, Outpu
             }
         }
 
-        return (system, ground.ToString());
+        return (system, ground.ToString(), complete);
     }
 
     /// <summary>The response with each text rewritten, or all text replaced by <paramref name="replacement"/>.</summary>
