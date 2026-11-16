@@ -21,6 +21,10 @@ public sealed class RetrievalBoundaryTests
         "src/PriorAuthBot.Core/Retrieval/Keyword/IKeywordSearch.cs",
         "src/PriorAuthBot.Core/Retrieval/Keyword/InMemoryKeywordSearch.cs",
         "src/PriorAuthBot.Core/Retrieval/Keyword/PostgresKeywordSearch.cs",
+
+        // Chapter 13: the audit context takes the records SecureRetriever returns, and keeps only
+        // their IDs and labels. It has no collection to query.
+        "src/PriorAuthBot.Core/Usage/AiRequestContext.cs",
     ];
 
     [Fact]

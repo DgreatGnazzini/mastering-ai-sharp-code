@@ -1,8 +1,11 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using PriorAuthBot.Core.Caching;
+using PriorAuthBot.Core.Observability;
 using PriorAuthBot.Core.Prompts;
 using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Core.Security;
+using PriorAuthBot.Core.Usage;
 
 namespace PriorAuthBot.Core.Rag;
 
@@ -10,7 +13,9 @@ namespace PriorAuthBot.Core.Rag;
 /// Retrieve, augment, generate (chapter 7). The caller's identity flows into retrieval, so the
 /// context, and therefore the answer, contains only what that caller can see. Chapter 12 adds a
 /// screen between retrieval and the prompt: chunks that carry instructions for the model are dropped
-/// before they are numbered, so the answer never cites them.
+/// before they are numbered, so the answer never cites them. Chapter 13 adds a span, the audit
+/// context's question and answer, and the answer cache, which is checked after the question screen
+/// (an attack is never served from the cache) and before retrieval (a hit costs no search).
 /// </summary>
 public sealed partial class RagAnswerService(
     SecureRetriever retriever,
@@ -18,7 +23,8 @@ public sealed partial class RagAnswerService(
     IChatClient chatClient,
     ILogger<RagAnswerService> logger,
     IPromptShield? shield = null,
-    Microsoft.Extensions.Options.IOptions<SecurityOptions>? security = null)
+    Microsoft.Extensions.Options.IOptions<SecurityOptions>? security = null,
+    SemanticAnswerCache? cache = null)
 {
     private readonly IPromptShield? _shield = security?.Value.Guardrails == false ? null : shield;
 
@@ -33,8 +39,39 @@ public sealed partial class RagAnswerService(
         ArgumentException.ThrowIfNullOrWhiteSpace(question);
         ArgumentNullException.ThrowIfNull(caller);
 
+        // Chapter 13: the span says what happened, in counts and flags. The audit context, which only
+        // the audit log reads, gets the question and the answer.
+        using var activity = PriorAuthBotTelemetry.Source.StartActivity("priorauthbot.ask");
+        var request = AiRequestContext.Current;
+        request?.SetCaller(caller);
+        request?.SetPrompt(question);
+        if (request is not null)
+        {
+            activity?.SetTag(PriorAuthBotTelemetry.Tags.AuditId, request.AuditId);
+        }
+
+        var answer = await AnswerAsync(question, caller, request, cancellationToken).ConfigureAwait(false);
+        request?.SetResponse(answer.Answer);
+        request?.MarkCited(answer.Citations.Select(c => c.DocumentId));
+        activity?.SetTag(PriorAuthBotTelemetry.Tags.Declined, answer.Declined);
+        activity?.SetTag("priorauthbot.answer.citations", answer.Citations.Count);
+        return answer;
+    }
+
+    private async Task<RagAnswer> AnswerAsync(string question, CallerIdentity caller, AiRequestContext? request, CancellationToken cancellationToken)
+    {
         // Chapter 12: check the question before it costs an embedding and a search, then the chunks after.
         await ScreenQuestionAsync(question, caller, cancellationToken).ConfigureAwait(false);
+
+        // Chapter 13: an answer already given to this exact permission set, for this question or a close paraphrase.
+        if (cache is { Enabled: true } && await cache.GetAsync(question, caller, cancellationToken).ConfigureAwait(false) is { } cached)
+        {
+            request?.MarkAnswerCacheHit();
+            request?.RecordDocuments(cached.Documents);
+            LogCacheHit(logger, caller.UserId, cached.Similarity);
+            return cached.Answer;
+        }
+
         var retrieved = await retriever.SearchAsync(question, caller, cancellationToken).ConfigureAwait(false);
         retrieved = await ScreenAsync(question, retrieved, caller, cancellationToken).ConfigureAwait(false);
         var context = assembler.Assemble(retrieved);
@@ -65,7 +102,18 @@ public sealed partial class RagAnswerService(
         var sources = context.Sources
             .Select((s, i) => Citations.Reference(i + 1, s.Record, cited.Contains(i + 1)))
             .ToList();
-        return new RagAnswer(cleaned, Declined: false, sources);
+        var answer = new RagAnswer(cleaned, Declined: false, sources);
+        if (cache is { Enabled: true })
+        {
+            // What a later hit shows the user again: the cited documents, recorded as cited.
+            var shown = context.Sources.Where((_, i) => cited.Contains(i + 1)).Select(s => s.Record)
+                .GroupBy(r => r.DocumentId, StringComparer.Ordinal)
+                .Select(g => new TouchedDocument(g.Key, g.First().Title, g.First().Sensitivity, g.First().ContainsPhi, AccessKind.Cited, [.. g.Select(r => r.ChunkId).Distinct(StringComparer.Ordinal)]))
+                .ToList();
+            await cache.SetAsync(question, caller, answer, shown, cancellationToken).ConfigureAwait(false);
+        }
+
+        return answer;
     }
 
     /// <summary>
@@ -147,6 +195,9 @@ public sealed partial class RagAnswerService(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Removed {Count} citation markers that pointed at no source, in an answer for {UserId}.")]
     private static partial void LogInvalidCitations(ILogger logger, string userId, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Answered {UserId} from the answer cache (similarity {Similarity:0.000}).")]
+    private static partial void LogCacheHit(ILogger logger, string userId, double similarity);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Declined for {UserId}: {Reason}.")]
     private static partial void LogDeclined(ILogger logger, string userId, string reason);

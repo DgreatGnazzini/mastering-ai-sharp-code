@@ -3,17 +3,31 @@ using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Search;
 using PriorAuthBot.Core.Security;
 
+using PriorAuthBot.Api.Observability;
+
 namespace PriorAuthBot.Api;
 
-public sealed record ChatRequest(string Message);
+public sealed record ChatRequest(string Message) : IAuditedRequest
+{
+    string IAuditedRequest.AuditText => Message;
+}
 
-public sealed record ClassifyRequest(string Question);
+public sealed record ClassifyRequest(string Question) : IAuditedRequest
+{
+    string IAuditedRequest.AuditText => Question;
+}
 
 public sealed record ClassifyResponse(QuestionIntent Intent, QuestionRoute Route);
 
-public sealed record CatalogSearchRequest(string Query, int? Top = null, CatalogSearchMode? Mode = null);
+public sealed record CatalogSearchRequest(string Query, int? Top = null, CatalogSearchMode? Mode = null) : IAuditedRequest
+{
+    string IAuditedRequest.AuditText => Query;
+}
 
-public sealed record SearchRequest(string Query);
+public sealed record SearchRequest(string Query) : IAuditedRequest
+{
+    string IAuditedRequest.AuditText => Query;
+}
 
 /// <summary>
 /// One search result. <paramref name="Score"/> orders the results; the other three show where a hit
@@ -22,7 +36,10 @@ public sealed record SearchRequest(string Query);
 /// </summary>
 public sealed record SearchHit(string DocumentId, string Title, string Section, double Score, double? VectorScore = null, int? KeywordRank = null, double? RerankScore = null, string Link = "");
 
-public sealed record AskRequest(string Question);
+public sealed record AskRequest(string Question) : IAuditedRequest
+{
+    string IAuditedRequest.AuditText => Question;
+}
 
 internal static class GroupOverageHandling
 {

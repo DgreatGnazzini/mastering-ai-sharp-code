@@ -7,6 +7,7 @@ using PriorAuthBot.Api.Agents;
 using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Api.Ingestion;
 using PriorAuthBot.Api.Mcp;
+using PriorAuthBot.Api.Observability;
 using PriorAuthBot.Api.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -27,10 +28,32 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPriorAuthBot(builder.Configuration);
 builder.Services.AddProblemDetails();
 
+// Chapter 13: traces, metrics, and logs, exported over OTLP when an endpoint is configured (Aspire does that).
+builder.AddPriorAuthBotTelemetry();
+
 // Chapter 12: the guardrails can be switched off only on a developer's machine.
 if (!builder.Configuration.GetValue("Security:Guardrails", true) && !builder.Environment.IsDevelopment())
 {
     throw new InvalidOperationException("Security:Guardrails can be false only in the Development environment.");
+}
+
+// Chapter 13: three settings that are fine on a laptop and a breach in production.
+if (!builder.Environment.IsDevelopment())
+{
+    if (builder.Configuration.GetValue<bool>("Telemetry:CaptureMessageContent"))
+    {
+        throw new InvalidOperationException("Telemetry:CaptureMessageContent can be true only in the Development environment: traces would carry prompts and answers, which can hold PHI.");
+    }
+
+    if (builder.Configuration["Logging:LogLevel:Microsoft.Extensions.AI"] is { } aiLevel && aiLevel.Equals("Trace", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("Logging for Microsoft.Extensions.AI can be Trace only in the Development environment: at Trace, LoggingChatClient logs every message.");
+    }
+
+    if ((builder.Configuration["Audit:Store"] ?? "InMemory") == "InMemory")
+    {
+        throw new InvalidOperationException("Audit:Store must be a durable, append-only store (Postgres) outside the Development environment.");
+    }
 }
 
 // Ingestion runs in the background and keeps the index in sync with the documents (chapter 7).
@@ -84,6 +107,10 @@ else
 
         // Keep Entra's claim names ("oid", "groups") instead of mapping them to long URIs.
         options.MapInboundClaims = false;
+
+        // Chapter 13: app roles arrive in the "roles" claim; the audit reader policy checks it.
+        options.TokenValidationParameters.RoleClaimType = "roles";
+        options.TokenValidationParameters.NameClaimType = "name";
     })
     .AddMcp(options =>
     {
@@ -98,7 +125,11 @@ else
     });
 }
 
-builder.Services.AddAuthorization();
+// Chapter 13: only the audit reader app role may read the audit log.
+builder.Services.AddAuthorization(options => options.AddPolicy(ObservabilityEndpoints.AuditReaderPolicy, policy => policy
+    .RequireAuthenticatedUser()
+    .RequireRole(builder.Configuration["Audit:ReaderRole"] ?? "PriorAuthBot.AuditReader")));
+builder.Services.AddSingleton<AuditEndpointFilter>();
 
 // Chapter 10: tools for the signed-in user, and the MCP servers PriorAuthBot may start. A stdio
 // server's relative paths are resolved from the API's content root.
@@ -152,7 +183,9 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseGroupOverageHandling();
 app.UseGuardrailHandling();
+app.UseUsageLimitHandling();
 app.UseAuthentication();
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), mcp => mcp.UseMiddleware<McpAuditMiddleware>());
 app.UseAuthorization();
 app.UseRateLimiter();
 
@@ -167,6 +200,9 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok("healthy"));
 
 var api = app.MapGroup("/").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);
+
+// Chapter 13: one audit record per request, for every endpoint in the group, before the response goes back.
+api.AddEndpointFilter<AuditEndpointFilter>();
 
 // Chapter 2: chat straight to the model, streamed as server-sent events. No documents involved.
 api.MapPost("/chat", ChatEndpoint.HandleAsync);
@@ -232,6 +268,9 @@ api.MapAssistant();
 
 // Chapter 11: the policy agent, and the policy exception workflow with its two human steps.
 api.MapAgents();
+
+// Chapter 13: your own token budget, feedback on answers, and the audit log for the audit reader role.
+api.MapObservability();
 
 // Chapter 10: the MCP endpoint, behind the same sign-in and per-user rate limit as everything else.
 app.MapMcp("/mcp").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);
