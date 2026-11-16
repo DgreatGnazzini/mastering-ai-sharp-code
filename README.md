@@ -132,4 +132,4 @@ All versions are pinned centrally in `Directory.Packages.props`. CI builds and t
 
 ## License
 
-Code is released under the [MIT License](LICENSE). The book text is copyright © 2026 John Gnazzo, all rights reserved.
+Code is released under the [MIT License](LICENSE). The book text is copyright © 2026 John F. Gnazzo, all rights reserved.
