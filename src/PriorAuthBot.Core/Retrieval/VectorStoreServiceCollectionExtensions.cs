@@ -26,6 +26,47 @@ public sealed class VectorStoreOptions
     public QdrantOptions Qdrant { get; set; } = new();
 
     public AzureAISearchOptions AzureAISearch { get; set; } = new();
+
+    /// <summary>
+    /// Chapter 15: the collection (table, index) PriorAuthBot reads and writes. Empty means the default,
+    /// <c>policy_chunks</c> (<c>policy-chunks</c> on Azure AI Search). A new embedding model gets a new
+    /// collection, built beside the old one, so the old revision keeps serving until the new one is proven.
+    /// </summary>
+    public string? Collection { get; set; }
+
+    /// <summary>What ingestion does when the collection was built by a different embedding model.</summary>
+    public EmbeddingModelChange OnEmbeddingModelChange { get; set; } = EmbeddingModelChange.Refuse;
+
+    public string CollectionName => Collection is { Length: > 0 } name
+        ? name
+        : Provider == "AzureAISearch" ? VectorStoreServiceCollectionExtensions.AzureAISearchIndexName : VectorStoreServiceCollectionExtensions.CollectionName;
+}
+
+public enum EmbeddingModelChange
+{
+    /// <summary>Fail ingestion, and so readiness: nothing is served from a collection of mixed vectors.</summary>
+    Refuse,
+
+    /// <summary>Re-embed every document in place. For a local or in-memory index only: retrieval fails while it runs.</summary>
+    Reembed,
+}
+
+/// <summary>A collection holds vectors from a different embedding model than the one configured.</summary>
+public sealed class EmbeddingModelMismatchException : InvalidOperationException
+{
+    public EmbeddingModelMismatchException()
+    {
+    }
+
+    public EmbeddingModelMismatchException(string message)
+        : base(message)
+    {
+    }
+
+    public EmbeddingModelMismatchException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }
 
 public sealed class QdrantOptions
@@ -80,7 +121,14 @@ public static class VectorStoreServiceCollectionExtensions
     public static IServiceCollection AddPriorAuthBotVectorStore(this IServiceCollection services, IConfiguration configuration)
     {
         var options = configuration.GetSection(VectorStoreOptions.SectionName).Get<VectorStoreOptions>() ?? new VectorStoreOptions();
-        var collectionName = CollectionName;
+        services.AddOptions<VectorStoreOptions>().Bind(configuration.GetSection(VectorStoreOptions.SectionName));
+        var collectionName = options.CollectionName;
+        if (!System.Text.RegularExpressions.Regex.IsMatch(collectionName, "^[a-z][a-z0-9_-]{0,62}$"))
+        {
+            // The name goes into SQL (the migration's grants, the keyword search), so it is checked here.
+            throw new InvalidOperationException($"VectorStore:Collection '{collectionName}' must be lowercase letters, digits, '_' or '-', starting with a letter.");
+        }
+
         switch (options.Provider)
         {
             case "InMemory":
@@ -103,7 +151,6 @@ public static class VectorStoreServiceCollectionExtensions
                 var endpoint = options.AzureAISearch.Endpoint
                     ?? throw new InvalidOperationException("VectorStore:AzureAISearch:Endpoint is required when VectorStore:Provider is AzureAISearch.");
                 services.AddSingleton<VectorStore>(sp => new AzureAISearchVectorStore(new SearchIndexClient(endpoint, sp.AzureCredential())));
-                collectionName = AzureAISearchIndexName;
                 break;
             default:
                 throw new InvalidOperationException($"Unknown vector store provider '{options.Provider}'.");

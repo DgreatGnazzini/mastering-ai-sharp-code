@@ -23,5 +23,6 @@
     <None Include="GoldenSet\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Catalog\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Reranker\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="LocalModels\tiny-genai-model\**" CopyToOutputDirectory="PreserveNewest" LinkBase="LocalModels\tiny-genai-model" />
   </ItemGroup>
 </Project>

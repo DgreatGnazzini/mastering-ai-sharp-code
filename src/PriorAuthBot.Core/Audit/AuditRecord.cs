@@ -58,6 +58,14 @@ public sealed record AuditRecord
 
     public decimal Cost { get; init; }
 
+    /// <summary>
+    /// Chapter 15: the models that answered, as <c>provider/model</c>. Null, and left out of the hashed
+    /// JSON, when no model was called, so every record written before this property existed still
+    /// serializes to the bytes it was hashed from and the chain stays valid.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Models { get; init; }
+
     /// <summary>The W3C trace the request ran in, to find its spans. The trace has the audit ID; the audit record has the trace ID.</summary>
     public string? TraceId { get; init; }
 

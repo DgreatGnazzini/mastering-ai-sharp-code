@@ -2,6 +2,9 @@ name: Latest packages
 
 # Weekly canary: builds and tests against the newest published version of every pinned package,
 # so an upstream API change shows up here before a reader finds it. Never commits anything.
+# Chapter 15: the job summary lists every newer version, classed major, minor, or patch, and the
+# offline eval gate runs on the bumped packages too, because a package can change behavior without
+# breaking a build: a connector that translates a filter differently passes every compile.
 
 on:
   schedule:
@@ -24,8 +27,11 @@ jobs:
         with:
           global-json-file: global.json
 
+      # ASP.NET Core packages move with the runtime: 11.x targets net11.0 and cannot restore here.
       - name: Bump every pinned package to its latest version
-        run: python3 scripts/bump-packages.py Directory.Packages.props
+        run: |
+          python3 scripts/bump-packages.py Directory.Packages.props --report package-report.md --same-major Microsoft.AspNetCore.
+          cat package-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Show what changed
         run: git diff Directory.Packages.props
@@ -35,3 +41,12 @@ jobs:
 
       - name: Test
         run: dotnet test --solution MasteringAI.slnx --configuration Release --no-build
+
+      - name: Eval gate, offline, on the newest packages (chapter 15)
+        run: >-
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release --no-build
+          -- --provider Offline --answers --tools --agents --redteam --ops --out eval-reports
+
+      - name: Add the gate to the job summary
+        if: always()
+        run: cat eval-reports/eval-gate-offline.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true

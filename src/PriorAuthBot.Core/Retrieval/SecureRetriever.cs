@@ -33,6 +33,8 @@ public sealed partial class SecureRetriever(
     IReranker? reranker = null,
     QueryRewriter? rewriter = null)
 {
+    private readonly string _embeddingModel = AI.ModelIdentity.Of(embeddingGenerator);
+
     public async Task<IReadOnlyList<RetrievedChunk>> SearchAsync(string query, CallerIdentity caller, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
@@ -53,6 +55,18 @@ public sealed partial class SecureRetriever(
         var results = settings.Mode == RetrievalMode.Vector
             ? await VectorSearchAsync(query, caller, settings.Top, cancellationToken).ConfigureAwait(false)
             : await HybridSearchAsync(query, caller, settings, cancellationToken).ConfigureAwait(false);
+
+        // Chapter 15: like the ACL check, redundant on purpose. Ingestion refuses to mix models in one
+        // collection; this turns the day something mixes them anyway into an error instead of answers
+        // ranked by meaningless scores.
+        foreach (var result in results)
+        {
+            if (!string.Equals(result.Record.EmbeddingModel, _embeddingModel, StringComparison.Ordinal))
+            {
+                throw new EmbeddingModelMismatchException(
+                    $"Chunk {result.Record.ChunkId} was embedded with '{result.Record.EmbeddingModel}', and queries are embedded with '{_embeddingModel}'.");
+            }
+        }
 
         LogSearch(logger, caller.UserId, results.Count);
         Record(activity, results.Select(r => r.Record), caller, AccessKind.Retrieved);

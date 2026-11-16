@@ -27,8 +27,14 @@ internal static partial class MigrateCommand
             PostgresDataSource.Create(new NpgsqlConnectionStringBuilder(connectionString) { Database = database }.ConnectionString, postgres, () => credential);
 
         await using var dataSource = PostgresDataSource.Create(connectionString, postgres, () => credential);
-        var migrator = new DatabaseMigrator(dataSource, ForDatabase, host.Services.GetRequiredService<ILogger<DatabaseMigrator>>());
         var options = configuration.GetSection(MigrationOptions.SectionName).Get<MigrationOptions>() ?? new MigrationOptions();
+        var live = configuration.GetSection(Core.Retrieval.VectorStoreOptions.SectionName).Get<Core.Retrieval.VectorStoreOptions>()?.CollectionName
+            ?? Core.Retrieval.VectorStoreServiceCollectionExtensions.CollectionName;
+        var migrator = new DatabaseMigrator(dataSource, ForDatabase, host.Services.GetRequiredService<ILogger<DatabaseMigrator>>())
+        {
+            // Chapter 15: the live collection, plus any being built beside it for a new embedding model.
+            Collections = [.. new[] { live }.Concat(options.Collections).Distinct(StringComparer.Ordinal)],
+        };
         try
         {
             var steps = await migrator.RunAsync(options);

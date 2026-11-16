@@ -47,6 +47,10 @@ public static class PriorAuthBotTelemetry
     public static readonly Counter<long> AuditRecords = Meter.CreateCounter<long>(
         "priorauthbot.audit.records", "{record}", "Audit records written, by result (written or failed).");
 
+    /// <summary>Chapter 15: model calls by route under hybrid routing. Created here so every meter lives in one place.</summary>
+    public static readonly Counter<long> ModelRoutes = Meter.CreateCounter<long>(
+        "priorauthbot.model.route", "{request}", "Model calls by route (hosted or local) and the reason for the route.");
+
     public static readonly Counter<long> Feedback = Meter.CreateCounter<long>(
         "priorauthbot.feedback", "{rating}", "User ratings of answers, by rating (helpful or not).");
 
@@ -64,5 +68,8 @@ public static class PriorAuthBotTelemetry
         public const string Declined = "priorauthbot.answer.declined";
         public const string CacheResult = "priorauthbot.cache.result";
         public const string Result = "priorauthbot.result";
+
+        /// <summary>Chapter 15: which model a call went to under hybrid routing, <c>hosted</c> or <c>local</c>.</summary>
+        public const string Route = "priorauthbot.route";
     }
 }

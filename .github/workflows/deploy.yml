@@ -96,7 +96,8 @@ jobs:
       - env:
           SHA: ${{ needs.gates.outputs.sha }}
           REASON: ${{ inputs.override_reason }}
-        run: echo "Gate override approved for ${SHA}. Reason: ${REASON}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Gate override approved for ${SHA}. Reason: ${REASON}" >> "$GITHUB_STEP_SUMMARY"
 
   image:
     name: Build, scan, and attest the images
