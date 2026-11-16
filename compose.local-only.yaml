@@ -1,0 +1,91 @@
+# Chapter 15: PriorAuthBot with every model inside your own network (the LocalOnly profile).
+#
+# What this file is about is the networks, not the services:
+#
+#   - "models" is internal: Ollama has no route out, so it cannot pull new weights under an old tag,
+#     and it publishes no port, so nothing but the API can reach it. Its API has no authentication:
+#     anyone who can reach port 11434 can run, pull, or delete models. Here that is only the API.
+#   - "data" is internal too: PostgreSQL (vectors, audit log, ledger) is reachable only from the API.
+#   - "edge" is the only network with a published port, and only the API is on it. It is also the
+#     API's one way out, which it needs for exactly one thing: Entra ID's signing keys (section 15.5).
+#
+# The models are pulled once, by a separate service that is on the outside network and shares the
+# model volume, then checked against models.lock.json before the API starts:
+#
+#   docker compose -f compose.local-only.yaml --profile pull run --rm pull
+#   docker compose -f compose.local-only.yaml up -d
+#
+# The pull prints each model's ID, the first 12 characters of its manifest digest: compare them with
+# "revision" in models.lock.json before you start the API. (The vision model is not pulled: the one
+# chapter 4 uses is licensed for research only, so intake OCR needs a replacement here first.)
+#
+# The API runs as it does in Azure (chapter 14's startup checks apply), with
+# ASPNETCORE_ENVIRONMENT=LocalOnly so that appsettings.LocalOnly.json is loaded. Set the Entra
+# values below to your own tenant's. Who patches it: the image tags below are pinned, and the weekly
+# latest-packages run does not move them. Updating Ollama or PostgreSQL is a change like any other,
+# reviewed in a pull request, with the eval run against the new image.
+name: priorauthbot-local
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/PriorAuthBot.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: LocalOnly
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Postgres__Authentication: Password
+      ConnectionStrings__priorauthbot: Host=postgres;Database=priorauthbot;Username=priorauthbot;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      Auth__Mode: Entra
+      Auth__JwtBearer__Authority: https://login.microsoftonline.com/${ENTRA_TENANT_ID:?set ENTRA_TENANT_ID}/v2.0
+      Auth__JwtBearer__Audience: ${ENTRA_API_AUDIENCE:-api://priorauthbot}
+      Tools__Downstream__ClientId: ${ENTRA_API_CLIENT_ID:?set ENTRA_API_CLIENT_ID}
+      Usage__CreateSchema: "true"
+      Audit__CreateSchema: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks: [edge, models, data]
+    depends_on: [ollama, postgres]
+
+  ollama:
+    image: ollama/ollama:0.40.16
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ollama-models:/root/.ollama
+    networks: [models]
+
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17-trixie
+    environment:
+      POSTGRES_USER: priorauthbot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: priorauthbot
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
+    networks: [data]
+
+  # Run once, on purpose, to fetch the models into the shared volume. It is the only container that
+  # can reach the internet with that volume mounted, and it is not running while the API is.
+  pull:
+    image: ollama/ollama:0.40.16
+    profiles: [pull]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - ollama serve & sleep 3 && ollama pull llama3.2:3b && ollama pull nomic-embed-text:v1.5 && ollama list
+    volumes:
+      - ollama-models:/root/.ollama
+    networks: [pull]
+
+networks:
+  edge: {}
+  pull: {}
+  models:
+    internal: true
+  data:
+    internal: true
+
+volumes:
+  ollama-models:
+  postgres-data:

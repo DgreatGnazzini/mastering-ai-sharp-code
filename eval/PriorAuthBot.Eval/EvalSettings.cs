@@ -17,7 +17,9 @@ internal sealed record EvalSettings(
     bool Tools = false,
     bool Agents = false,
     bool RedTeam = false,
-    bool Ops = false)
+    bool Ops = false,
+    string? BaselineProvider = null,
+    int LatencySamples = 0)
 {
     public const string Offline = "Offline";
     public const string Ollama = "Ollama";
@@ -27,6 +29,22 @@ internal sealed record EvalSettings(
     /// against the model deployment a new revision will use. Signed in with the job's managed identity.
     /// </summary>
     public const string AzureOpenAI = "AzureOpenAI";
+
+    /// <summary>
+    /// Chapter 15: a model running in the eval's own process with ONNX Runtime GenAI. Embeddings and the
+    /// judge stay on Ollama, so only the answering model differs from an Ollama run.
+    /// </summary>
+    public const string OnnxGenAI = "OnnxGenAI";
+
+    public static string? OnnxModelPath => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_ONNX_MODEL");
+
+    public static string OnnxModelId => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_ONNX_MODEL_ID") ?? new Core.AI.OnnxGenAIOptions().ModelId;
+
+    /// <summary>
+    /// Chapter 15: whose baselines the gate compares with. A candidate model is held to the bar the
+    /// current model set (<c>--baseline-provider Ollama</c>), not to a bar of its own.
+    /// </summary>
+    public string GateProvider => BaselineProvider ?? Provider;
 
     /// <summary>A real model answers, so calls are slow, cached on disk, and judged.</summary>
     public bool IsLive => Provider != Offline;
@@ -46,6 +64,7 @@ internal sealed record EvalSettings(
     public string AnsweringModel => Provider switch
     {
         Ollama => ChatModel,
+        OnnxGenAI => OnnxModelId,
         AzureOpenAI => AzureChatDeployment,
         _ => "offline",
     };
@@ -56,7 +75,7 @@ internal sealed record EvalSettings(
     /// <summary>The LLM judge's chat client, for a live provider.</summary>
     public Microsoft.Extensions.AI.IChatClient CreateJudge() => Provider switch
     {
-        Ollama => new OllamaSharp.OllamaApiClient(
+        Ollama or OnnxGenAI => new OllamaSharp.OllamaApiClient(
             new HttpClient { BaseAddress = new Uri(OllamaEndpoint!), Timeout = TimeSpan.FromMinutes(10) }, JudgeModel),
         AzureOpenAI => Microsoft.Extensions.AI.OpenAIClientExtensions.AsIChatClient(Core.AI.AiServiceCollectionExtensions
             .CreateAzureOpenAI(new Core.AI.AzureOpenAIOptions { Endpoint = new Uri(AzureEndpoint!) }, Core.Hosting.AzureIdentity.CreateCredential(AzureIdentityFromEnvironment()))
@@ -90,9 +109,9 @@ internal sealed record EvalSettings(
         }
 
         var provider = Value("--provider") ?? Offline;
-        if (provider is not (Offline or Ollama or AzureOpenAI))
+        if (provider is not (Offline or Ollama or OnnxGenAI or AzureOpenAI))
         {
-            throw new ArgumentException($"--provider must be {Offline}, {Ollama}, or {AzureOpenAI}, not '{provider}'.");
+            throw new ArgumentException($"--provider must be {Offline}, {Ollama}, {OnnxGenAI}, or {AzureOpenAI}, not '{provider}'.");
         }
 
         return new EvalSettings(
@@ -106,7 +125,9 @@ internal sealed record EvalSettings(
             args.Contains("--tools"),
             args.Contains("--agents"),
             args.Contains("--redteam"),
-            args.Contains("--ops"));
+            args.Contains("--ops"),
+            Value("--baseline-provider"),
+            args.Contains("--latency") ? int.Parse(Value("--latency") is { } n && !n.StartsWith("--", StringComparison.Ordinal) ? n : "8", CultureInfo.InvariantCulture) : 0);
     }
 
     /// <summary>PriorAuthBot's configuration for this provider, as the API would read it.</summary>
@@ -133,6 +154,17 @@ internal sealed record EvalSettings(
             settings["Azure:ManagedIdentityClientId"] = identity.ManagedIdentityClientId;
             settings["Azure:TenantId"] = identity.TenantId;
             settings["Retrieval:MinScore"] = AzureMinScore ?? set.Ollama.MinScore.ToString(CultureInfo.InvariantCulture);
+            settings["AI:CacheResponses"] = "true";
+            settings["AI:CacheEmbeddings"] = "true";
+        }
+        else if (Provider == OnnxGenAI)
+        {
+            settings["AI:Provider"] = "OnnxGenAI";
+            settings["AI:OnnxGenAI:ModelPath"] = OnnxModelPath ?? throw new InvalidOperationException("Set PRIORAUTHBOT_TEST_ONNX_MODEL to the model folder (scripts/get-model.py downloads it).");
+            settings["AI:OnnxGenAI:ModelId"] = OnnxModelId;
+            settings["AI:Ollama:Endpoint"] = OllamaEndpoint ?? throw new InvalidOperationException("Set PRIORAUTHBOT_TEST_OLLAMA: the embeddings and the judge run on Ollama.");
+            settings["AI:Ollama:EmbeddingModel"] = EmbeddingModel;
+            settings["Retrieval:MinScore"] = set.Ollama.MinScore.ToString(CultureInfo.InvariantCulture);
             settings["AI:CacheResponses"] = "true";
             settings["AI:CacheEmbeddings"] = "true";
         }

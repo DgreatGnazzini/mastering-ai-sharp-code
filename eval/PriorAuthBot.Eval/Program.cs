@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.AI.Evaluation;
 using Microsoft.Extensions.AI.Evaluation.Reporting;
@@ -17,6 +18,11 @@ namespace PriorAuthBot.Eval;
 ///   add --ops for chapter 13: audit completeness, telemetry content, tokens and cost, and the answer cache
 ///   --provider AzureOpenAI runs the same suite against an Azure OpenAI deployment (chapter 14)
 ///   --smoke URL [--expect-revision SHA] checks a running revision's probes and sign-in (chapter 14)
+///   --provider OnnxGenAI runs it against an in-process ONNX Runtime GenAI model (chapter 15)
+///   add --latency [N] to time N answers with no cache, with their tokens and cost (chapter 15)
+///   --baseline-provider NAME gates against another provider's baselines: a candidate model meets the current one's bar
+///   --compare CURRENT.json CANDIDATE.json writes the side-by-side model comparison (chapter 15)
+///   --verify-models [--onnx DIR] checks local models against models.lock.json (chapter 15)
 /// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
 /// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
 /// </summary>
@@ -35,6 +41,17 @@ internal static class EvalProgram
         if (args.Contains("--smoke"))
         {
             return await SmokeTest.RunAsync(args);
+        }
+
+        // Chapter 15: the model comparison and the model check read files and servers, not the golden set.
+        if (args.Contains("--compare"))
+        {
+            return await ModelComparison.RunAsync(args);
+        }
+
+        if (args.Contains("--verify-models"))
+        {
+            return await VerifyModels.RunAsync(args);
         }
 
         var settings = EvalSettings.Parse(args);
@@ -204,22 +221,36 @@ internal static class EvalProgram
             Console.WriteLine(opsReport);
         }
 
+        // 2f. Latency and cost (chapter 15): a few answers with no cache, timed.
+        LatencySummary? latency = null;
+        if (settings.LatencySamples > 0)
+        {
+            Console.WriteLine($"Latency, {settings.LatencySamples} answers with no cache:");
+            latency = await LatencyEvaluation.RunAsync(settings, set, settings.LatencySamples, Console.WriteLine);
+            Console.WriteLine($"  p50 {latency.P50Seconds:0.00} s, p95 {latency.P95Seconds:0.00} s, {latency.OutputTokensPerSecond:0.0} output tokens/s, ${latency.CostPerAnswer:0.000000} per answer.");
+        }
+
         if (cache is not null)
         {
             Console.WriteLine($"Answer and embedding cache: {cache.Hits} hits, {cache.Misses} misses.");
         }
 
-        // 3. The regression gate, on the shipped configuration.
-        if (!settings.Gate)
+        // 3. The regression gate, on the shipped configuration. Chapter 15: against another provider's
+        // baselines when asked, so a candidate model is held to the current model's bar.
+        var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
+        GateResult? gate = null;
+        if (settings.Gate)
         {
-            return 0;
+            gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.GateProvider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary, redTeamSummary, opsSummary);
+            var label = settings.GateProvider == settings.Provider ? settings.Provider : $"{settings.Provider} against the {settings.GateProvider} baselines";
+            var gateReport = Reports.Gate(label, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary, agentSummary, redTeamSummary));
+            await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
+            Console.WriteLine(gateReport);
         }
 
-        var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
-        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary, redTeamSummary, opsSummary);
-        var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary, agentSummary, redTeamSummary));
-        await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
-        Console.WriteLine(gateReport);
-        return gate.Ok ? 0 : 1;
+        // Chapter 15: the run as JSON, for a model comparison.
+        var runSummary = EvalSummary.Of(settings, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, redTeamSummary, latency, gate);
+        await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-summary-{settings.Provider.ToLowerInvariant()}.json"), JsonSerializer.Serialize(runSummary, Baselines.Json));
+        return gate?.Ok == false ? 1 : 0;
     }
 }

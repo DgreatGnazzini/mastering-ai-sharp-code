@@ -137,8 +137,14 @@ public sealed partial class OfflineChatClient : IChatClient
     [System.Text.RegularExpressions.GeneratedRegex(@"(?<n>\d+(\.\d+)?)\s*(?<unit>hours|hrs|hour|h|days|day)\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex Hours();
 
+    /// <summary>Chapter 15: the offline client names itself, like any model, for caches and the audit log.</summary>
+    private static readonly ChatClientMetadata Metadata = new("offline", null, "offline");
+
     public object? GetService(Type serviceType, object? serviceKey = null) =>
-        serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
+        serviceKey is not null ? null
+        : serviceType == typeof(ChatClientMetadata) ? Metadata
+        : serviceType.IsInstanceOfType(this) ? this
+        : null;
 
     public void Dispose()
     {

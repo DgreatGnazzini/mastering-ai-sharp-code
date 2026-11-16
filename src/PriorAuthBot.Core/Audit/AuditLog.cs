@@ -51,6 +51,7 @@ public sealed partial class AuditLog(IAuditStore store, IOptions<AuditOptions> o
             InputTokens = request.InputTokens,
             OutputTokens = request.OutputTokens,
             Cost = request.Cost,
+            Models = request.Models is { Count: > 0 } models ? models : null,
             TraceId = Activity.Current?.TraceId.ToHexString(),
         };
 

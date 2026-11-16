@@ -18,8 +18,16 @@ public sealed partial class IngestionPipeline(
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
     VectorStoreCollection<Guid, ChunkRecord> collection,
     ILogger<IngestionPipeline> logger,
-    Caching.SemanticAnswerCache? answerCache = null)
+    Caching.SemanticAnswerCache? answerCache = null,
+    Microsoft.Extensions.Options.IOptions<VectorStoreOptions>? storeOptions = null)
 {
+    /// <summary>
+    /// Chapter 15: the embedding model every chunk this pipeline writes is stamped with. Vectors from
+    /// two models are not comparable, so one collection holds one model's vectors, and this is how
+    /// ingestion and retrieval tell.
+    /// </summary>
+    private readonly string _embeddingModel = AI.ModelIdentity.Of(embeddingGenerator);
+
     private const int EmbeddingBatchSize = 32;
     private const int MaxDocuments = 100_000;
 
@@ -42,6 +50,24 @@ public sealed partial class IngestionPipeline(
         await foreach (var first in collection.GetAsync(r => r.ChunkIndex == 0, MaxDocuments, cancellationToken: cancellationToken).ConfigureAwait(false))
         {
             indexed[first.DocumentId] = first;
+        }
+
+        // Chapter 15: a collection built by another embedding model. Writing this model's vectors next to
+        // those would leave a collection where half the scores mean nothing, so by default ingestion
+        // refuses, and the fix is a new collection (VectorStore:Collection) built beside the old one.
+        // For a local index you can rebuild at will, OnEmbeddingModelChange=Reembed re-embeds every document.
+        var stale = indexed.Values.Where(r => !string.Equals(r.EmbeddingModel, _embeddingModel, StringComparison.Ordinal)).ToList();
+        if (stale.Count > 0)
+        {
+            var found = stale.Select(r => r.EmbeddingModel is { Length: > 0 } m ? m : "(none recorded)").Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
+            if (storeOptions?.Value.OnEmbeddingModelChange != EmbeddingModelChange.Reembed)
+            {
+                throw new EmbeddingModelMismatchException(
+                    $"The collection holds {stale.Count} document(s) embedded with {string.Join(", ", found)}, and the configured embedding model is {_embeddingModel}. " +
+                    "Point VectorStore:Collection at a new collection and let ingestion build it, or set VectorStore:OnEmbeddingModelChange to Reembed for an index you can rebuild in place.");
+            }
+
+            LogReembedding(logger, stale.Count, string.Join(", ", found), _embeddingModel);
         }
 
         int added = 0, updated = 0, unchanged = 0, removed = 0, skipped = 0, chunksWritten = 0;
@@ -67,7 +93,7 @@ public sealed partial class IngestionPipeline(
             }
 
             var hash = Hash(document);
-            if (existing?.DocumentHash == hash)
+            if (existing?.DocumentHash == hash && string.Equals(existing.EmbeddingModel, _embeddingModel, StringComparison.Ordinal))
             {
                 unchanged++;
                 continue;
@@ -149,6 +175,7 @@ public sealed partial class IngestionPipeline(
                     Department = document.Department,
                     ContainsPhi = document.Access.ContainsPhi,
                     Embedding = embeddings[i].Vector,
+                    EmbeddingModel = _embeddingModel,
                 });
             }
         }
@@ -195,6 +222,9 @@ public sealed partial class IngestionPipeline(
             string.Join(',', document.Access.AllowedGroups), document.Access.Sensitivity, document.Access.ContainsPhi, document.Text);
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(material)));
     }
+
+    [LoggerMessage(EventId = 1502, Level = LogLevel.Warning, Message = "Re-embedding {Count} document(s) in place: they were embedded with {Found}, and the configured model is {Model}.")]
+    private static partial void LogReembedding(ILogger logger, int count, string found, string model);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Document {DocumentId} has no allowed groups and was not indexed.")]
     private static partial void LogNoAcl(ILogger logger, string documentId);

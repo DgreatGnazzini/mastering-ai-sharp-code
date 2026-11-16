@@ -36,6 +36,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Chapter 14: every setting that is a defect outside Development, checked before anything starts.
 ProductionReadiness.EnsureReady(builder.Configuration, builder.Environment.EnvironmentName);
 
+// Chapter 15: with PriorAuthBot:Profile=LocalOnly, nothing may be configured that leaves the network.
+LocalOnlyProfile.EnsureLocal(builder.Configuration);
+
 // Chapter 14: the app's one Azure credential (its managed identity in Azure), shared by every client.
 builder.Services.AddSingleton(AzureIdentity.CreateCredential(AzureIdentity.Options(builder.Configuration)));
 
