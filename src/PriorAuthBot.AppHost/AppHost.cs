@@ -35,6 +35,10 @@ builder.AddProject<Projects.PriorAuthBot_Api>("api")
     .WithEnvironment("AI__Provider", "Ollama")
     .WithEnvironment("AI__Ollama__Endpoint", ollama.GetEndpoint("http"))
     .WithEnvironment("Tools__Hr__BaseAddress", hr.GetEndpoint("http"))
+    // Chapter 13: the audit log in its append-only table in the same database. Aspire also sets
+    // OTEL_EXPORTER_OTLP_ENDPOINT, so traces, metrics, and logs appear in the dashboard.
+    .WithEnvironment("Audit__Store", "Postgres")
+    .WithEnvironment("Audit__CreateSchema", "true")
     .WaitFor(hr);
 
 builder.Build().Run();

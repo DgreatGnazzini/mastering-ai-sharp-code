@@ -14,6 +14,8 @@ internal static class EvalPaths
 
     public static string RedTeamCases => Path.Combine(RepoRoot, "eval", "datasets", "red-team-cases.json");
 
+    public static string CacheCases => Path.Combine(RepoRoot, "eval", "datasets", "cache-cases.json");
+
     public static string RedTeamDocuments => Path.Combine(RepoRoot, "eval", "datasets", "red-team");
 
     public static string ApiSettings => Path.Combine(RepoRoot, "src", "PriorAuthBot.Api", "appsettings.json");

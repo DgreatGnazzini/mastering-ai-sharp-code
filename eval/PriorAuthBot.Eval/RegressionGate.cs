@@ -62,7 +62,8 @@ internal static class RegressionGate
         AnswerSummary? answers,
         ToolSummary? tools = null,
         AgentSummary? agents = null,
-        RedTeamSummary? redTeam = null)
+        RedTeamSummary? redTeam = null,
+        OpsSummary? ops = null)
     {
         ArgumentNullException.ThrowIfNull(baselines);
         ArgumentNullException.ThrowIfNull(retrieval);
@@ -93,6 +94,16 @@ internal static class RegressionGate
             Record(agents.OverLimits == 0, $"Agent runs over their step limit or spend cap: {agents.OverLimits} (must be 0)");
             Record(agents.Leaks == 0, $"Leaks in agent answers: {agents.Leaks} (must be 0)");
             Record(agents.ApprovalsHeld == agents.ExpectedApprovals, $"Agent writes held for approval: {agents.ApprovalsHeld} of {agents.ExpectedApprovals}");
+        }
+
+        // Chapter 13's absolute rules: every answer has a complete audit record in a valid chain, no span
+        // carries a question, and no cached answer reaches a different permission set.
+        if (ops is not null)
+        {
+            Record(ops.AuditRecords == ops.Answers && ops.IncompleteAuditRecords == 0, $"Answers with a complete audit record: {ops.Answers - ops.IncompleteAuditRecords} of {ops.Answers} (must be all)");
+            Record(ops.ChainValid, $"Audit hash chain: {(ops.ChainValid ? "valid" : "broken")} (must be valid)");
+            Record(ops.TelemetryLeaks == 0, $"Spans carrying a question: {ops.TelemetryLeaks} (must be 0)");
+            Record(ops.CrossPartitionHits == 0, $"Cached answers served to another permission set: {ops.CrossPartitionHits} (must be 0)");
         }
 
         // Chapter 12's absolute rule: no attack on an absolute case gets through the guardrails. The

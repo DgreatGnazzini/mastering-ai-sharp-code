@@ -14,6 +14,7 @@ namespace PriorAuthBot.Eval;
 ///   add --tools to any of them for chapter 10's tool cases (tool choice, arguments, approvals)
 ///   add --agents for chapter 11's agent cases (the exception workflow and policy agent conversations)
 ///   add --redteam for chapter 12's attacks, run with the guardrails and again without them
+///   add --ops for chapter 13: audit completeness, telemetry content, tokens and cost, and the answer cache
 /// Options: --out DIR (reports), --cache DIR (answers, embeddings, judge replies), --baselines FILE,
 /// --execution NAME, --no-gate. Exit code 1 means the regression gate failed.
 /// </summary>
@@ -176,6 +177,19 @@ internal static class EvalProgram
             Console.WriteLine(redTeamReport);
         }
 
+        // 2e. Operations (chapter 13): every answer audited, no question in any span, no cached answer
+        // across permission sets, and what each answer costs.
+        OpsSummary? opsSummary = null;
+        if (settings.Ops)
+        {
+            Console.WriteLine("Observability, audit, and cost:");
+            var (summary, opsAnswers, pairs) = await OpsEvaluation.RunAsync(settings, set, cache, Console.WriteLine);
+            opsSummary = summary;
+            var opsReport = OpsEvaluation.Report(settings.Provider, summary, opsAnswers, pairs);
+            await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-ops-{settings.Provider.ToLowerInvariant()}.md"), opsReport);
+            Console.WriteLine(opsReport);
+        }
+
         if (cache is not null)
         {
             Console.WriteLine($"Answer and embedding cache: {cache.Hits} hits, {cache.Misses} misses.");
@@ -188,7 +202,7 @@ internal static class EvalProgram
         }
 
         var shipped = runs.Single(r => r.Configuration.Name == RetrievalConfiguration.Chapter8);
-        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary, redTeamSummary);
+        var gate = RegressionGate.Check(Baselines.Load(settings.BaselinesPath), settings.Provider, shipped.Summary(), runs.Sum(r => r.Leaks), answerSummary, toolSummary, agentSummary, redTeamSummary, opsSummary);
         var gateReport = Reports.Gate(settings.Provider, gate, RegressionGate.Proposed(shipped.Summary(), answerSummary, toolSummary, agentSummary, redTeamSummary));
         await File.WriteAllTextAsync(Path.Combine(settings.ReportDirectory, $"eval-gate-{settings.Provider.ToLowerInvariant()}.md"), gateReport);
         Console.WriteLine(gateReport);

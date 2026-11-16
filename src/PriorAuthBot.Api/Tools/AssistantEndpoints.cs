@@ -3,7 +3,10 @@ using PriorAuthBot.Core.Tools;
 
 namespace PriorAuthBot.Api.Tools;
 
-public sealed record AssistRequest(string Message);
+public sealed record AssistRequest(string Message) : PriorAuthBot.Api.Observability.IAuditedRequest
+{
+    string PriorAuthBot.Api.Observability.IAuditedRequest.AuditText => Message;
+}
 
 /// <summary>
 /// Chapter 10's endpoints. <c>POST /assist</c> lets the model use tools. A write comes back as a
