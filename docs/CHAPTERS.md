@@ -37,3 +37,5 @@ Rules:
 | `ch08` | [docs/chapters/ch08.md](chapters/ch08.md) |
 | `ch09` | [docs/chapters/ch09.md](chapters/ch09.md) |
 | `ch10` | [docs/chapters/ch10.md](chapters/ch10.md) |
+| `ch11` | [docs/chapters/ch11.md](chapters/ch11.md) |
+| `ch12` | [docs/chapters/ch12.md](chapters/ch12.md) |

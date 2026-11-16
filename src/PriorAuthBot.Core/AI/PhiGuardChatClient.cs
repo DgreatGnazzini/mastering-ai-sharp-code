@@ -48,14 +48,15 @@ public sealed class PhiGuardChatClient(IChatClient innerClient) : DelegatingChat
             {
                 contents.Add(content switch
                 {
-                    TextContent text => new TextContent(PhiRedactor.Redact(text.Text).Text),
+                    // Keep AdditionalProperties: chapter 12's guardrails read the untrusted-content flag there.
+                    TextContent text => new TextContent(PhiRedactor.Redact(text.Text).Text) { AdditionalProperties = text.AdditionalProperties },
                     DataContent or UriContent => throw new PhiNotAllowedException(
                         "Images and files are not sent to this provider: it is not approved for PHI. Set AI:ApprovedForPhi only if a BAA covers it."),
                     _ => content,
                 });
             }
 
-            guarded.Add(new ChatMessage(message.Role, contents) { AuthorName = message.AuthorName });
+            guarded.Add(new ChatMessage(message.Role, contents) { AuthorName = message.AuthorName, AdditionalProperties = message.AdditionalProperties });
         }
 
         return guarded;

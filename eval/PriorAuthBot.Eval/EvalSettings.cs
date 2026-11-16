@@ -15,7 +15,8 @@ internal sealed record EvalSettings(
     string BaselinesPath,
     string ExecutionName,
     bool Tools = false,
-    bool Agents = false)
+    bool Agents = false,
+    bool RedTeam = false)
 {
     public const string Offline = "Offline";
     public const string Ollama = "Ollama";
@@ -54,7 +55,8 @@ internal sealed record EvalSettings(
             Value("--baselines") ?? EvalPaths.Baselines,
             Value("--execution") ?? DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture),
             args.Contains("--tools"),
-            args.Contains("--agents"));
+            args.Contains("--agents"),
+            args.Contains("--redteam"));
     }
 
     /// <summary>PriorAuthBot's configuration for this provider, as the API would read it.</summary>

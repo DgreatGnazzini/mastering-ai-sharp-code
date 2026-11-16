@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OllamaSharp;
 using OpenAI;
+using PriorAuthBot.Core.Security;
 
 namespace PriorAuthBot.Core.AI;
 
@@ -38,6 +39,7 @@ public static class AiServiceCollectionExtensions
     public static IServiceCollection AddPriorAuthBotAI(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
+        services.AddPriorAuthBotSecurity(configuration);
         if (configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheResponses)}")
             || configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheEmbeddings)}"))
         {
@@ -81,8 +83,9 @@ public static class AiServiceCollectionExtensions
 
     /// <summary>
     /// The middleware every PriorAuthBot chat client gets, outermost first: the PHI guard (only for a
-    /// provider not approved for PHI) runs before anything can log or cache the request, logging sees
-    /// each call once, the cache answers repeats without a model call, and retries sit closest to the provider.
+    /// provider not approved for PHI) runs before anything can log, cache, or shield the request; the
+    /// guardrails (chapter 12) check what goes in and what comes out; logging sees each call once, the
+    /// cache answers repeats without a model call, and retries sit closest to the provider.
     /// </summary>
     public static ChatClientBuilder UsePriorAuthBotPipeline(this ChatClientBuilder builder)
     {
@@ -91,6 +94,7 @@ public static class AiServiceCollectionExtensions
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsApprovedForPhi
                 ? inner
                 : new PhiGuardChatClient(inner))
+            .UsePriorAuthBotGuardrails()
             .UseLogging()
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheResponses
                 ? new DistributedCachingChatClient(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())
@@ -100,6 +104,26 @@ public static class AiServiceCollectionExtensions
                 sp.GetRequiredService<IOptions<AiOptions>>().Value.Resilience,
                 sp.GetService<ILoggerFactory>()?.CreateLogger<RetryingChatClient>()));
     }
+
+    /// <summary>
+    /// Chapter 12: the prompt shield, then the output guard. The shield is outer, so the output guard
+    /// compares the answer with the request the model actually got, after any flagged source was removed.
+    /// <see cref="SecurityOptions.Guardrails"/> turns both off, for the red-team eval's comparison run.
+    /// </summary>
+    public static ChatClientBuilder UsePriorAuthBotGuardrails(this ChatClientBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder
+            .Use((inner, sp) => sp.GetRequiredService<IOptions<SecurityOptions>>().Value is { Guardrails: true } security
+                ? new PromptShieldChatClient(inner, sp.GetRequiredService<IPromptShield>(), security, Logger<PromptShieldChatClient>(sp))
+                : inner)
+            .Use((inner, sp) => sp.GetRequiredService<IOptions<SecurityOptions>>().Value.Guardrails
+                ? new OutputGuardChatClient(inner, sp.GetRequiredService<OutputGuard>(), Logger<OutputGuardChatClient>(sp))
+                : inner);
+    }
+
+    private static ILogger<T> Logger<T>(IServiceProvider sp) =>
+        sp.GetService<ILoggerFactory>()?.CreateLogger<T>() ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<T>.Instance;
 
     /// <summary>
     /// Function invocation with PriorAuthBot's limits (chapter 10). The loop stops after a few round

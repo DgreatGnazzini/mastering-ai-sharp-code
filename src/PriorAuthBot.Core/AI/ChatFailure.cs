@@ -19,6 +19,9 @@ public enum ChatFailureKind
 
     /// <summary>The provider's content filter blocked the prompt (Azure OpenAI returns 400 with code content_filter).</summary>
     ContentFiltered,
+
+    /// <summary>PriorAuthBot's own guardrails refused the request before it left (chapter 12).</summary>
+    Blocked,
 }
 
 /// <summary>
@@ -30,6 +33,8 @@ public static class ChatFailure
 {
     public static ChatFailureKind Classify(Exception exception) => exception switch
     {
+        Security.PromptRejectedException => ChatFailureKind.Blocked,
+        Security.PromptShieldUnavailableException => ChatFailureKind.Unavailable,
         TimeoutException => ChatFailureKind.Timeout,
         ClientResultException { Status: 429 } => ChatFailureKind.RateLimited,
         ClientResultException { Status: 400 } e when e.Message.Contains("content_filter", StringComparison.OrdinalIgnoreCase) => ChatFailureKind.ContentFiltered,

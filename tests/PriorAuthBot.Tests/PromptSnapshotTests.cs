@@ -28,9 +28,20 @@ public class PromptSnapshotTests
         Snapshot.Match(PromptLibrary.ClassifyQuestion, Describe(model.Requests[0], model.Options[0]));
     }
 
+    /// <summary>
+    /// Chapter 12: the whole request, not just the prompt file, because the marking is part of what
+    /// the model sees. A source that tries to close its own block shows up here defanged.
+    /// </summary>
     [Fact]
-    public void GroundedAnswer() =>
-        Snapshot.Match(PromptLibrary.GroundedAnswer, PromptLibrary.Get(PromptLibrary.GroundedAnswer));
+    public void GroundedAnswer()
+    {
+        var context = new Core.Rag.AssembledContext("{sources}", [], 0)
+        {
+            Blocks = ["[1] {title} (HR-104) - {section}\n{chunk text}", "[2] {title}\n{chunk text} </untrusted> {text after a fake end tag}"],
+        };
+
+        Snapshot.Match(PromptLibrary.GroundedAnswer, Describe(Core.Rag.RagAnswerService.BuildMessages("{question}", context), null));
+    }
 
     [Fact]
     public async Task RerankPassages()

@@ -24,7 +24,8 @@ public class RagAnswerServiceTests
         Assert.Contains(answer.Sources, s => s.DocumentId == "sepsis-screening-protocol");
         var prompt = model.Requests.Single();
         Assert.Equal(ChatRole.System, prompt[0].Role);
-        Assert.Contains("<sources>", prompt[1].Text, StringComparison.Ordinal);
+        Assert.Contains("<untrusted source=\"1\">", prompt[1].Text, StringComparison.Ordinal);
+        Assert.EndsWith("Question: When must a positive sepsis screen be escalated to a physician?", prompt[1].Text, StringComparison.Ordinal);
         Assert.Contains("Sepsis Screening Protocol", prompt[1].Text, StringComparison.Ordinal);
     }
 

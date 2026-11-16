@@ -125,7 +125,9 @@ public sealed partial class AssistantService(
             }
 
             // Keep a copy of the exact arguments. Approval runs these, not whatever the model says next.
-            var arguments = Snapshot(call.Arguments);
+            // Chapter 12: identifiers in a write's text arguments are redacted first. A help desk ticket
+            // is read by many people and kept for years; an SSN pasted into chat should not end up in one.
+            var arguments = RedactText(Snapshot(call.Arguments));
             var action = pending.Add(caller.UserId, call.Name, arguments, PriorAuthBotTools.Describe(call.Name, arguments));
             proposed.Add(new PendingActionView(action.Id, action.ToolName, action.Description, action.Arguments, action.ExpiresAt));
             LogProposed(logger, caller.UserId, call.Name, action.Id);
@@ -187,6 +189,14 @@ public sealed partial class AssistantService(
         arguments is null
             ? []
             : arguments.ToDictionary(kv => kv.Key, kv => (object?)JsonSerializer.SerializeToElement(kv.Value, AIJsonUtilities.DefaultOptions), StringComparer.Ordinal);
+
+    private static Dictionary<string, object?> RedactText(Dictionary<string, object?> arguments) =>
+        arguments.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value is JsonElement { ValueKind: JsonValueKind.String } text
+                ? (object?)JsonSerializer.SerializeToElement(Privacy.PhiRedactor.Redact(text.GetString() ?? string.Empty).Text, AIJsonUtilities.DefaultOptions)
+                : kv.Value,
+            StringComparer.Ordinal);
 
     private static readonly JsonSerializerOptions Compact = new(AIJsonUtilities.DefaultOptions) { WriteIndented = false };
 

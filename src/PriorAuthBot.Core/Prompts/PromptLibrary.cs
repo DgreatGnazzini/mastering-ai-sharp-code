@@ -14,7 +14,7 @@ namespace PriorAuthBot.Core.Prompts;
 public static partial class PromptLibrary
 {
     public const string ClassifyQuestion = "classify-question.v1";
-    public const string GroundedAnswer = "grounded-answer.v1";
+    public const string GroundedAnswer = "grounded-answer.v2";
     public const string ExtractIntakeForm = "extract-intake-form.v1";
     public const string RerankPassages = "rerank-passages.v1";
     public const string RewriteQuery = "rewrite-query.v1";
