@@ -85,7 +85,7 @@ Extract a scanned prior authorization form into typed fields, as a claims analys
 curl -X POST http://localhost:5080/intake -H "X-Demo-User: claims" -F "file=@samples/intake/intake-form-001.png;type=image/png"
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI, and [docs/chapters/ch08.md](docs/chapters/ch08.md) for hybrid search, the reranker, and the chat page at `/ui`.
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI, [docs/chapters/ch08.md](docs/chapters/ch08.md) for hybrid search, the reranker, and the chat page at `/ui`, and [docs/chapters/ch09.md](docs/chapters/ch09.md) for the evaluation suite (`dotnet run --project eval/PriorAuthBot.Eval`).
 
 ## Configuration and secrets
 
@@ -106,6 +106,9 @@ dotnet user-secrets set "AI:OpenAI:ApiKey" "<your-key>"
 | `tools/PriorAuthBot.TokenCost` | Token and cost calculator (chapter 1) |
 | `docs/chapters/` | A short README per chapter: what it adds and how to run it |
 | `tests/PriorAuthBot.Tests` | Unit and regression tests |
+| `eval/PriorAuthBot.Eval` | The evaluation suite: retrieval metrics, leak checks, LLM judges, reports, and the regression gate (chapter 9) |
+| `eval/datasets/golden-set.json` | The golden set: 105 synthetic questions, 27 of them permission cases |
+| `eval/baselines.json` | The numbers a change must not fall below (CODEOWNERS review) |
 | `samples/documents` | Deductible Dynamics' fictional policies, protocols, and procedures |
 | `samples/catalog` | About 200 policy summaries for semantic search (chapter 5) |
 | `samples/files`, `samples/intake` | PDF, Word, and scanned samples, and an intake form (chapter 4) |

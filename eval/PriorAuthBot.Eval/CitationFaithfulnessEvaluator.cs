@@ -4,10 +4,10 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.AI.Evaluation;
 using PriorAuthBot.Core.Rag;
 
-namespace PriorAuthBot.Tests.Evaluation;
+namespace PriorAuthBot.Eval;
 
 /// <summary>The numbered sources an answer was given, for <see cref="CitationFaithfulnessEvaluator"/>.</summary>
-public sealed class CitationSourcesContext(IReadOnlyList<string> sources)
+internal sealed class CitationSourcesContext(IReadOnlyList<string> sources)
     : EvaluationContext(ContextName, sources.Select((s, i) => (AIContent)new TextContent($"[{i + 1}] {s}")).ToList())
 {
     public const string ContextName = "Cited sources";
@@ -23,7 +23,7 @@ public sealed class CitationSourcesContext(IReadOnlyList<string> sources)
 /// cited source supports, and coverage, the share of sentences that cite anything at all.
 /// One judge call per answer, with every cited sentence in it.
 /// </summary>
-public sealed class CitationFaithfulnessEvaluator : IEvaluator
+internal sealed class CitationFaithfulnessEvaluator : IEvaluator
 {
     public const string FaithfulnessMetricName = "Citation faithfulness";
     public const string CoverageMetricName = "Citation coverage";

@@ -24,6 +24,9 @@ public sealed class LiveHybridSearchTests(ITestOutputHelper output)
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly GoldenSet Set = GoldenSet.Load();
 
+    /// <summary>The 24 questions chapter 8 measured. Chapter 9's eval project runs all of them.</summary>
+    private static readonly List<GoldenCase> Chapter8Cases = Set.Cases.Where(c => c.Chapter <= 8).ToList();
+
     [Fact]
     public async Task CatalogWithOllama()
     {
@@ -134,7 +137,7 @@ public sealed class LiveHybridSearchTests(ITestOutputHelper output)
         report.Append("| Configuration | Expected document found | MRR | Exact-term cases found | Declines kept (no results) | Leaks | Time per question |\n|---|---|---|---|---|---|---|\n");
         var scoreNotes = new StringBuilder();
         var leaks = 0;
-        var exactIds = Set.Cases.Where(c => c.IsExactTerm && c.Expected.Length > 0).Select(c => c.Id).ToHashSet();
+        var exactIds = Chapter8Cases.Where(c => c.IsExactTerm && c.Expected.Length > 0).Select(c => c.Id).ToHashSet();
 
         foreach (var (name, overrides) in configurations)
         {
@@ -154,7 +157,7 @@ public sealed class LiveHybridSearchTests(ITestOutputHelper output)
             var expectedScores = new List<double>();
             var declineScores = new List<double>();
             var watch = Stopwatch.StartNew();
-            foreach (var goldenCase in Set.Cases)
+            foreach (var goldenCase in Chapter8Cases)
             {
                 var caller = Set.Caller(goldenCase.User);
                 var results = await retriever.SearchAsync(goldenCase.Question, caller, ct);
@@ -186,7 +189,7 @@ public sealed class LiveHybridSearchTests(ITestOutputHelper output)
             }
 
             leaks += configurationLeaks;
-            var perQuestion = watch.Elapsed.TotalMilliseconds / Set.Cases.Count;
+            var perQuestion = watch.Elapsed.TotalMilliseconds / Chapter8Cases.Count;
             report.Append(CultureInfo.InvariantCulture,
                 $"| {name} | {found}/{withExpected} | {reciprocal / withExpected:0.00} | {exactFound}/{exactIds.Count} | {declinesKept}/{declines} | {configurationLeaks} | {perQuestion:0} ms |\n");
             if (expectedScores.Count > 0)

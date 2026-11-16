@@ -438,3 +438,5 @@ appsettings.Development.json
 
 # Chapter 8: the cross-encoder reranker, downloaded by scripts/get-reranker.sh
 models/
+.eval-cache/
+eval-reports/
