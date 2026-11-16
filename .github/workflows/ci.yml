@@ -234,7 +234,9 @@ jobs:
         run: |
           python3 scripts/get-model.py --record-ollama http://localhost:11434
           git diff models.lock.json || true
-          dotnet run --project eval/PriorAuthBot.Eval --configuration Release -- --verify-models
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release -- --verify-models \
+            --ollama "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL" --ollama "$PRIORAUTHBOT_TEST_CHAT_MODEL" \
+            --ollama "$PRIORAUTHBOT_TEST_JUDGE_MODEL" --ollama "$PRIORAUTHBOT_TEST_VISION_MODEL"
 
       - name: Eval suite with LLM judges, tool, agent, red-team, and operations cases, and the regression gate (chapters 9 to 15)
         # Chapter 15: --latency times 8 answers with no cache, for the model comparison.
