@@ -389,6 +389,14 @@ jobs:
       - name: Validate the parameters file
         run: jq -e '.parameters | has("environmentName") and has("apiClientId")' infra/main.parameters.json
 
+      # Chapter 15: deploy.yml had a YAML error from chapter 14 on (an unquoted ": " in a run line), so
+      # GitHub never ran it and marked every push as failed. A workflow file is code; this lints them all.
+      - name: Lint the workflows
+        run: |
+          python3 -m venv "$RUNNER_TEMP/lint"
+          "$RUNNER_TEMP/lint/bin/pip" install --quiet actionlint-py==1.7.12.25
+          "$RUNNER_TEMP/lint/bin/actionlint" -shellcheck= .github/workflows/*.yml
+
   container:
     name: Container image (build, scan, SBOM, smoke test)
     runs-on: ubuntu-latest
