@@ -1,0 +1,23 @@
+{
+  "description": "Chapter 13: question pairs for the answer cache. same=true pairs are paraphrases that should share one cached answer; same=false pairs read alike but ask something else, so serving one's answer for the other is a wrong answer. Every question is synthetic. user is a golden-set persona.",
+  "cases": [
+    { "id": "cc01", "user": "nurse", "same": true, "question": "When must a positive sepsis screen be escalated to a physician?", "variant": "How quickly does a positive sepsis screen have to go to a physician?" },
+    { "id": "cc02", "user": "staff", "same": true, "question": "Can I work remotely?", "variant": "Am I allowed to work from home?" },
+    { "id": "cc03", "user": "hr", "same": true, "question": "How many PTO days can I carry over into next year?", "variant": "What is the limit on carrying PTO over into the next year?" },
+    { "id": "cc04", "user": "claims", "same": true, "question": "How long does a member have to file an appeal?", "variant": "What is the deadline for a member to appeal a denied claim?" },
+    { "id": "cc05", "user": "staff", "same": true, "question": "How do I report a privacy incident?", "variant": "What is the process for reporting a privacy incident?" },
+    { "id": "cc06", "user": "nurse", "same": true, "question": "What must be checked during medication reconciliation at admission?", "variant": "What does medication reconciliation on admission involve?" },
+    { "id": "cc07", "user": "claims", "same": true, "question": "Does a lumbar MRI need prior authorization?", "variant": "Is prior auth required for an MRI of the lower back?" },
+    { "id": "cc08", "user": "contractor", "same": true, "question": "Can contractors use personal laptops for work?", "variant": "As a contractor, may I use my own laptop for my work?" },
+    { "id": "cc09", "user": "compliance", "same": true, "question": "What was the outcome of privacy incident 2026-031?", "variant": "How was privacy incident 2026-031 resolved?" },
+    { "id": "cc10", "user": "staff", "same": true, "question": "How do I submit an expense report?", "variant": "What are the steps to file an expense report?" },
+    { "id": "cc11", "user": "staff", "same": false, "question": "Can I work remotely?", "variant": "Can contractors work remotely?" },
+    { "id": "cc12", "user": "hr", "same": false, "question": "How many PTO days can I carry over into next year?", "variant": "How many PTO days do I accrue each year?" },
+    { "id": "cc13", "user": "claims", "same": false, "question": "How long does a member have to file an appeal?", "variant": "How long does the plan have to decide an appeal?" },
+    { "id": "cc14", "user": "nurse", "same": false, "question": "When must a positive sepsis screen be escalated to a physician?", "variant": "When must a positive sepsis screen be documented in the chart?" },
+    { "id": "cc15", "user": "claims", "same": false, "question": "Does a lumbar MRI need prior authorization?", "variant": "Does a cervical MRI need prior authorization?" },
+    { "id": "cc16", "user": "staff", "same": false, "question": "How do I report a privacy incident?", "variant": "How do I report a safety incident?" },
+    { "id": "cc17", "user": "staff", "same": false, "question": "How do I submit an expense report?", "variant": "How do I appeal a rejected expense report?" },
+    { "id": "cc18", "user": "nurse", "same": false, "question": "What must be checked during medication reconciliation at admission?", "variant": "What must be checked during medication reconciliation at discharge?" }
+  ]
+}

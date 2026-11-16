@@ -44,6 +44,12 @@ internal static partial class ChatEndpoint
     /// <summary>Maps a provider failure to the status a client can act on. Never echoes the provider's message.</summary>
     public static IResult ToProblem(Exception exception, ILogger logger)
     {
+        if (exception is PriorAuthBot.Core.Usage.TokenQuotaExceededException quota)
+        {
+            // Chapter 13: the budget, not the model, said no. Tell the client when to come back.
+            return Observability.UsageLimitHandling.Quota(quota, TimeProvider.System);
+        }
+
         var kind = exception is OperationCanceledException ? ChatFailureKind.Timeout : ChatFailure.Classify(exception);
         LogFailed(logger, exception, kind);
         return kind switch

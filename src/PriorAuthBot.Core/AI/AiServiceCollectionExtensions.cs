@@ -8,7 +8,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OllamaSharp;
 using OpenAI;
+using PriorAuthBot.Core.Observability;
 using PriorAuthBot.Core.Security;
+using PriorAuthBot.Core.Usage;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace PriorAuthBot.Core.AI;
 
@@ -40,6 +43,7 @@ public static class AiServiceCollectionExtensions
     {
         services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
         services.AddPriorAuthBotSecurity(configuration);
+        services.AddPriorAuthBotUsage(configuration);
         if (configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheResponses)}")
             || configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheEmbeddings)}"))
         {
@@ -82,11 +86,33 @@ public static class AiServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Chapter 13: telemetry settings, the per-user token budgets, and the ledger they are counted in.
+    /// </summary>
+    public static IServiceCollection AddPriorAuthBotUsage(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<TelemetryOptions>().Bind(configuration.GetSection(TelemetryOptions.SectionName));
+        services.AddOptions<UsageOptions>().Bind(configuration.GetSection(UsageOptions.SectionName));
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<TokenCounter>();
+        services.TryAddSingleton<ITokenLedger>(sp => new InMemoryTokenLedger(
+            sp.GetRequiredService<IOptionsMonitor<UsageOptions>>(), sp.GetRequiredService<TimeProvider>()));
+        return services;
+    }
+
+    /// <summary>
     /// The middleware every PriorAuthBot chat client gets, outermost first: the PHI guard (only for a
     /// provider not approved for PHI) runs before anything can log, cache, or shield the request; the
-    /// guardrails (chapter 12) check what goes in and what comes out; logging sees each call once, the
-    /// cache answers repeats without a model call, and retries sit closest to the provider.
+    /// guardrails (chapter 12) check what goes in and what comes out; OpenTelemetry (chapter 13) makes
+    /// one <c>gen_ai</c> span per call, with message content off unless configured; metering checks
+    /// the user's budget and charges what the call used; logging sees each call once, the cache
+    /// answers repeats without a model call, and retries sit closest to the provider.
     /// </summary>
+    /// <remarks>
+    /// OpenTelemetry is inside the PHI guard, so even a developer who turns content capture on sees
+    /// redacted text for a provider that is not approved for PHI. Metering is above the response
+    /// cache: with <see cref="AiOptions.CacheResponses"/> on, a cached reply is charged as if the model
+    /// had produced it, which over-counts cost and errs on the safe side for a budget.
+    /// </remarks>
     public static ChatClientBuilder UsePriorAuthBotPipeline(this ChatClientBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -95,6 +121,17 @@ public static class AiServiceCollectionExtensions
                 ? inner
                 : new PhiGuardChatClient(inner))
             .UsePriorAuthBotGuardrails()
+            .Use((inner, sp) => new OpenTelemetryChatClient(inner, Logger<OpenTelemetryChatClient>(sp), PriorAuthBotTelemetry.AiSourceName)
+            {
+                // Set explicitly from PriorAuthBot's own setting, so no environment variable can turn it on.
+                EnableSensitiveData = sp.GetService<IOptions<TelemetryOptions>>()?.Value.CaptureMessageContent ?? false,
+            })
+            .Use((inner, sp) => new MeteringChatClient(
+                inner,
+                sp.GetRequiredService<ITokenLedger>(),
+                sp.GetRequiredService<IOptionsMonitor<UsageOptions>>(),
+                sp.GetRequiredService<TokenCounter>(),
+                Logger<MeteringChatClient>(sp)))
             .UseLogging()
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheResponses
                 ? new DistributedCachingChatClient(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())
@@ -144,7 +181,7 @@ public static class AiServiceCollectionExtensions
 
     /// <summary>
     /// The middleware every embedding generator gets (chapter 5), in the same order as the chat
-    /// pipeline: the PHI guard first, then logging, then an optional cache. Embeddings are a good
+    /// pipeline: the PHI guard first, then OpenTelemetry (chapter 13), logging, and an optional cache. Embeddings are a good
     /// fit for caching, because the same text always gets the same vector from the same model.
     /// </summary>
     public static EmbeddingGeneratorBuilder<string, Embedding<float>> UsePriorAuthBotEmbeddingPipeline(this EmbeddingGeneratorBuilder<string, Embedding<float>> builder)
@@ -154,6 +191,10 @@ public static class AiServiceCollectionExtensions
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.IsApprovedForPhi
                 ? inner
                 : new PhiGuardEmbeddingGenerator(inner))
+            .Use((inner, sp) => new OpenTelemetryEmbeddingGenerator<string, Embedding<float>>(inner, Logger<OpenTelemetryEmbeddingGenerator<string, Embedding<float>>>(sp), PriorAuthBotTelemetry.AiSourceName)
+            {
+                EnableSensitiveData = sp.GetService<IOptions<TelemetryOptions>>()?.Value.CaptureMessageContent ?? false,
+            })
             .UseLogging()
             .Use((inner, sp) => sp.GetRequiredService<IOptions<AiOptions>>().Value.CacheEmbeddings
                 ? new DistributedCachingEmbeddingGenerator<string, Embedding<float>>(inner, sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>())

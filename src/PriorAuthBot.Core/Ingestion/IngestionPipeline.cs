@@ -17,7 +17,8 @@ public sealed partial class IngestionPipeline(
     IChunker chunker,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
     VectorStoreCollection<Guid, ChunkRecord> collection,
-    ILogger<IngestionPipeline> logger)
+    ILogger<IngestionPipeline> logger,
+    Caching.SemanticAnswerCache? answerCache = null)
 {
     private const int EmbeddingBatchSize = 32;
     private const int MaxDocuments = 100_000;
@@ -96,6 +97,14 @@ public sealed partial class IngestionPipeline(
         }
 
         var report = new IngestionReport(added, updated, unchanged, removed, skipped, chunksWritten);
+
+        // Chapter 13: a changed document or ACL can change any answer, and can take a document away
+        // from a group. Every cached answer is dropped, rather than guessing which ones it affects.
+        if (added + updated + removed > 0)
+        {
+            answerCache?.Invalidate();
+        }
+
         LogReport(logger, report.Added, report.Updated, report.Unchanged, report.Removed, report.SkippedNoAcl, report.ChunksWritten);
         return report;
     }

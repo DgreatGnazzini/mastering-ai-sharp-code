@@ -29,10 +29,13 @@ Trust boundaries:
 | T9 | An answer carries HTML or script into the client | LLM05 | `src/PriorAuthBot.Core/Security/MarkdownSanitizer.cs`, `src/PriorAuthBot.Api/ui/index.html` | rt13-script-tag, GuardrailTests |
 | T10 | The model performs a write the user did not approve | LLM06 | `src/PriorAuthBot.Core/Tools/AssistantService.cs`, `src/PriorAuthBot.Core/Tools/PendingActions.cs` | rt02-dan, rt14-self-approve, AssistantServiceTests |
 | T11 | An agent is talked into changing its approver or claiming a decision | LLM06 | `src/PriorAuthBot.Core/Agents/Exceptions/ExceptionWorkflow.cs` | rt15-exception-approver, rt16-exception-claims-approval, ExceptionWorkflowTests |
-| T12 | A request runs up cost or exhausts the context window | LLM10 | `src/PriorAuthBot.Core/Security/SecurityOptions.cs`, `src/PriorAuthBot.Core/Agents/AgentBudget.cs`, `src/PriorAuthBot.Api/Endpoints.cs` | rt18-huge-question, AgentBudgetTests |
+| T12 | A request runs up cost or exhausts the context window | LLM10 | `src/PriorAuthBot.Core/Security/SecurityOptions.cs`, `src/PriorAuthBot.Core/Agents/AgentBudget.cs`, `src/PriorAuthBot.Api/Endpoints.cs`, `src/PriorAuthBot.Core/Usage/MeteringChatClient.cs` (chapter 13) | rt18-huge-question, AgentBudgetTests, TokenBudgetTests |
 | T13 | An MCP server changes a tool's description after it was vetted | LLM03 | `src/PriorAuthBot.Core/Mcp/McpToolVetting.cs` | McpVettingTests |
 | T14 | Retrieval returns chunks the user may not see | LLM08 | `src/PriorAuthBot.Core/Retrieval/SecureRetriever.cs` | SecureRetrieverTests, RetrievalBoundaryTests |
 | T15 | An answer states something its sources do not | LLM09 | `src/PriorAuthBot.Core/Rag/Citations.cs`, `eval/PriorAuthBot.Eval/CitationFaithfulnessEvaluator.cs` | CitationFaithfulnessTests |
+| T16 | A cached answer reaches a user with fewer permissions than the user who first asked (chapter 13) | LLM08 | `src/PriorAuthBot.Core/Caching/PermissionPartition.cs`, `src/PriorAuthBot.Core/Caching/SemanticAnswerCache.cs`, `src/PriorAuthBot.Core/Ingestion/IngestionPipeline.cs` | AnswerCacheTests |
+| T17 | Prompts, answers, or PHI end up in traces and logs, which far more people can read than the audit log (chapter 13) | LLM02 | `src/PriorAuthBot.Core/Observability/TelemetryOptions.cs`, `src/PriorAuthBot.Core/AI/AiServiceCollectionExtensions.cs`, `src/PriorAuthBot.Api/Program.cs` | TelemetryTests |
+| T18 | Nobody can show who saw which PHI, because a request went unrecorded or a record was changed (chapter 13) | LLM02 | `src/PriorAuthBot.Api/Observability/AuditEndpointFilter.cs`, `src/PriorAuthBot.Core/Audit/AuditRecord.cs`, `src/PriorAuthBot.Core/Audit/audit-log.sql` | AuditApiTests, AuditChainTests, PostgresAuditStoreTests |
 
 ## Accepted risks
 
