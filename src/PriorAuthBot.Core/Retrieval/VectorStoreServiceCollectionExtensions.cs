@@ -4,10 +4,13 @@ using CommunityToolkit.VectorData.AzureAISearch;
 using CommunityToolkit.VectorData.InMemory;
 using CommunityToolkit.VectorData.PgVector;
 using CommunityToolkit.VectorData.Qdrant;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.VectorData;
 using Npgsql;
+using PriorAuthBot.Core.Retrieval.Keyword;
+using PriorAuthBot.Core.Retrieval.Reranking;
 using Qdrant.Client;
 
 namespace PriorAuthBot.Core.Retrieval;
@@ -77,6 +80,7 @@ public static class VectorStoreServiceCollectionExtensions
     {
         var options = configuration.GetSection(VectorStoreOptions.SectionName).Get<VectorStoreOptions>() ?? new VectorStoreOptions();
         var collectionName = CollectionName;
+        string? postgres = null;
         switch (options.Provider)
         {
             case "InMemory":
@@ -85,7 +89,8 @@ public static class VectorStoreServiceCollectionExtensions
             case "Postgres":
                 var connectionString = configuration.GetConnectionString("priorauthbot")
                     ?? throw new InvalidOperationException("ConnectionStrings:priorauthbot is required when VectorStore:Provider is Postgres.");
-                services.AddSingleton<VectorStore>(_ => new PostgresVectorStore(WithIterativeScan(connectionString)));
+                postgres = WithIterativeScan(connectionString);
+                services.AddSingleton<VectorStore>(_ => new PostgresVectorStore(postgres));
                 break;
             case "Qdrant":
                 var qdrant = options.Qdrant;
@@ -104,7 +109,49 @@ public static class VectorStoreServiceCollectionExtensions
 
         services.AddSingleton(sp => sp.GetRequiredService<VectorStore>().GetCollection<Guid, ChunkRecord>(collectionName));
         services.AddOptions<RetrievalOptions>().Bind(configuration.GetSection(RetrievalOptions.SectionName));
-        services.AddSingleton<SecureRetriever>();
+
+        // Chapter 8: the keyword side of hybrid search, one per store. Qdrant and Azure AI Search
+        // have their own hybrid search through IKeywordHybridSearchable, which section 8.2 shows;
+        // PriorAuthBot runs vector-only on them until the keyword side is ported (docs/chapters/ch08.md).
+        switch (options.Provider)
+        {
+            case "InMemory":
+                services.AddSingleton<IKeywordSearch>(sp => new InMemoryKeywordSearch(sp.GetRequiredService<VectorStoreCollection<Guid, ChunkRecord>>()));
+                break;
+            case "Postgres":
+                services.AddSingleton(_ => NpgsqlDataSource.Create(postgres!));
+                services.AddSingleton<IKeywordSearch>(sp => new PostgresKeywordSearch(
+                    sp.GetRequiredService<NpgsqlDataSource>(), sp.GetRequiredService<VectorStoreCollection<Guid, ChunkRecord>>(), collectionName));
+                break;
+            default:
+                services.AddSingleton<IKeywordSearch, NoKeywordSearch>();
+                break;
+        }
+
+        var retrieval = configuration.GetSection(RetrievalOptions.SectionName).Get<RetrievalOptions>() ?? new RetrievalOptions();
+        switch (retrieval.Rerank.Provider)
+        {
+            case "None":
+                break;
+            case "CrossEncoder":
+                services.AddSingleton<IReranker>(_ => new CrossEncoderReranker(retrieval.Rerank.ModelPath));
+                break;
+            case "Llm":
+                services.AddSingleton<IReranker>(sp => new LlmReranker(sp.GetRequiredService<IChatClient>()));
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown reranker '{retrieval.Rerank.Provider}'. Use None, CrossEncoder, or Llm.");
+        }
+
+        services.AddSingleton(sp => new QueryRewriter(sp.GetRequiredService<IChatClient>()));
+        services.AddSingleton(sp => new SecureRetriever(
+            sp.GetRequiredService<VectorStoreCollection<Guid, ChunkRecord>>(),
+            sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>(),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RetrievalOptions>>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SecureRetriever>>(),
+            sp.GetService<IKeywordSearch>(),
+            sp.GetService<IReranker>(),
+            sp.GetService<QueryRewriter>()));
         return services;
     }
 }

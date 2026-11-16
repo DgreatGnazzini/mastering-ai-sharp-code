@@ -100,6 +100,13 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapGet("/", () => PriorAuthBotInfo.Current);
+
+// Chapter 8: a minimal chat page that shows answers with their citations. It signs in with the demo
+// personas, so it exists only in Development; production gets a real front end with Entra sign-in.
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/ui", (IWebHostEnvironment environment) => Results.File(Path.Combine(environment.ContentRootPath, "ui", "index.html"), "text/html; charset=utf-8"));
+}
 app.MapGet("/health", () => Results.Ok("healthy"));
 
 var api = app.MapGroup("/").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);
@@ -135,15 +142,25 @@ api.MapPost("/catalog/search", async (CatalogSearchRequest request, PolicyCatalo
     }
 
     await catalog.EnsureBuiltAsync(Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.Value.Path)), cancellationToken);
-    return Results.Ok(await catalog.SearchAsync(request.Query, Math.Clamp(request.Top ?? options.Value.Top, 1, 20), cancellationToken));
+    var top = Math.Clamp(request.Top ?? options.Value.Top, 1, 20);
+    return Results.Ok(await catalog.SearchAsync(request.Query, request.Mode ?? options.Value.Mode, top, cancellationToken));
 });
 
-// Chapters 6 and 7: permission-aware search, showing what the caller is allowed to retrieve.
+// Chapters 6 to 8: permission-aware hybrid search, showing what the caller is allowed to retrieve.
 api.MapPost("/search", async (SearchRequest request, ClaimsPrincipal user, CallerIdentityFactory identities, SecureRetriever retriever, CancellationToken cancellationToken) =>
 {
     var caller = identities.Create(user);
     var results = await retriever.SearchAsync(request.Query, caller, cancellationToken);
-    return results.Select(r => new SearchHit(r.Record.DocumentId, r.Record.Title, r.Record.Section, Math.Round(r.Score, 3)));
+    return results.Select(r => new SearchHit(r.Record.DocumentId, r.Record.Title, r.Record.Section, Math.Round(r.Score, 4),
+        r.VectorScore is { } v ? Math.Round(v, 3) : null, r.KeywordRank, r.RerankScore is { } s ? Math.Round(s, 3) : null, Citations.Link(r.Record)));
+});
+
+// Chapter 8: where a citation link lands. The same group filter as search, and the same 404 whether
+// the document is missing or restricted, so a link never confirms that a restricted document exists.
+api.MapGet("/documents/{documentId}", async (string documentId, ClaimsPrincipal user, CallerIdentityFactory identities, SecureRetriever retriever, CancellationToken cancellationToken) =>
+{
+    var document = documentId.Length <= 200 ? await retriever.GetDocumentAsync(documentId, identities.Create(user), cancellationToken) : null;
+    return document is null ? Results.NotFound() : Results.Ok(document);
 });
 
 // Chapter 7: grounded answers from the documents the caller can see.

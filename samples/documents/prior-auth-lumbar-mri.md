@@ -13,6 +13,10 @@ phi: false
 
 These criteria apply to requests for MRI of the lumbar spine for members of all Deductible Dynamics commercial plans. They are used by utilization management nurses and claims reviewers.
 
+## Codes
+
+These criteria apply to CPT 72148 (MRI of the lumbar spine without contrast), CPT 72149 (with contrast), and CPT 72158 (without and then with contrast).
+
 ## Approval criteria
 
 A lumbar spine MRI is approved when the request documents either of the following:

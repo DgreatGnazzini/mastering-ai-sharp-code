@@ -7,7 +7,7 @@ namespace PriorAuthBot.Core;
 public sealed record PriorAuthBotInfo(string Name, string Organization, string Chapter)
 {
     /// <summary>The chapter tag this code corresponds to ("ch00" is the starting skeleton).</summary>
-    public const string CurrentChapter = "ch07";
+    public const string CurrentChapter = "ch08";
 
     public static PriorAuthBotInfo Current { get; } = new("PriorAuthBot", "Deductible Dynamics", CurrentChapter);
 }

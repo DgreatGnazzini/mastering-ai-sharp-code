@@ -40,6 +40,9 @@
     <PackageVersion Include="CommunityToolkit.VectorData.Qdrant" Version="1.0.1" />
     <PackageVersion Include="CommunityToolkit.VectorData.AzureAISearch" Version="1.0.1" />
   </ItemGroup>
+  <ItemGroup Label="Reranking with a local cross-encoder (ch08)">
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
+  </ItemGroup>
   <ItemGroup Label="Agents (ch09-ch10)">
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.28.0" />

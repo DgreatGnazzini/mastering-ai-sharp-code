@@ -28,11 +28,26 @@ public sealed class CatalogOptions
     public string QueryPrefix { get; set; } = string.Empty;
 
     public string DocumentPrefix { get; set; } = string.Empty;
+
+    /// <summary>How <c>/catalog/search</c> ranks entries. Hybrid from chapter 8 on.</summary>
+    public CatalogSearchMode Mode { get; set; } = CatalogSearchMode.Hybrid;
+
+    /// <summary>How many candidates each side of a hybrid search contributes before fusion.</summary>
+    public int CandidatesPerLeg { get; set; } = 20;
+}
+
+/// <summary>Chapter 5 searched by meaning only. Chapter 8 adds keywords, and both together.</summary>
+public enum CatalogSearchMode
+{
+    Semantic,
+    Keyword,
+    Hybrid,
 }
 
 /// <summary>
-/// Semantic search over the policy catalog (chapter 5): about 200 summaries, embedded once, held in
-/// memory, and searched with <see cref="SemanticIndex{T}"/>. Every entry is readable by all staff,
+/// Search over the policy catalog: about 200 summaries, embedded once, held in memory, and searched
+/// by meaning with <see cref="SemanticIndex{T}"/> (chapter 5), by keyword with <see cref="Bm25Index{T}"/>,
+/// or by both, fused with <see cref="ReciprocalRankFusion"/> (chapter 8). Every entry is readable by all staff,
 /// so there is no access filter here; chapter 6 moves documents with access lists into a vector store.
 /// </summary>
 public sealed class PolicyCatalog(IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, CatalogOptions options) : IDisposable
@@ -40,6 +55,7 @@ public sealed class PolicyCatalog(IEmbeddingGenerator<string, Embedding<float>> 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly SemaphoreSlim _buildLock = new(1, 1);
     private SemanticIndex<CatalogEntry>? _index;
+    private Bm25Index<CatalogEntry>? _keywords;
 
     /// <summary>What the last build cost: entries, embedding requests, and time.</summary>
     public CatalogBuildStats? LastBuild { get; private set; }
@@ -64,6 +80,7 @@ public sealed class PolicyCatalog(IEmbeddingGenerator<string, Embedding<float>> 
         ArgumentOutOfRangeException.ThrowIfLessThan(options.BatchSize, 1);
         var watch = Stopwatch.StartNew();
         var index = new SemanticIndex<CatalogEntry>();
+        var keywords = new Bm25Index<CatalogEntry>();
         var requests = 0;
 
         foreach (var batch in entries.Chunk(options.BatchSize))
@@ -74,23 +91,52 @@ public sealed class PolicyCatalog(IEmbeddingGenerator<string, Embedding<float>> 
             for (var i = 0; i < batch.Length; i++)
             {
                 index.Add(batch[i], embeddings[i].Vector);
+                keywords.Add(batch[i], EmbeddingInput(batch[i]));
             }
         }
 
         _index = index;
+        _keywords = keywords;
         LastBuild = new CatalogBuildStats(entries.Count, requests, watch.Elapsed);
         return LastBuild;
     }
 
-    public async Task<IReadOnlyList<CatalogHit>> SearchAsync(string query, int? top = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CatalogHit>> SearchAsync(string query, int? top = null, CancellationToken cancellationToken = default) =>
+        await SearchAsync(query, options.Mode, top, cancellationToken).ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<CatalogHit>> SearchAsync(string query, CatalogSearchMode mode, int? top = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         var index = _index ?? throw new InvalidOperationException("The catalog has not been built. Call BuildAsync first.");
+        var keywords = _keywords!;
+        var count = top ?? options.Top;
+
+        if (mode == CatalogSearchMode.Keyword)
+        {
+            return keywords.Search(query, count).Select(r => Hit(r.Item, r.Score)).ToList();
+        }
+
         var vector = await embeddingGenerator.GenerateVectorAsync(options.QueryPrefix + query, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return index.Search(vector.Span, top ?? options.Top)
-            .Select(r => new CatalogHit(r.Item.Id, r.Item.Policy, r.Item.Title, r.Item.Department, r.Item.Summary, Math.Round(r.Score, 3)))
+        if (mode == CatalogSearchMode.Semantic)
+        {
+            return index.Search(vector.Span, count).Select(r => Hit(r.Item, r.Score)).ToList();
+        }
+
+        // Hybrid: the best candidates by meaning and by keyword, merged by rank (section 8.3).
+        var candidates = Math.Max(options.CandidatesPerLeg, count);
+        IReadOnlyList<IReadOnlyList<CatalogEntry>> rankings =
+        [
+            index.Search(vector.Span, candidates).Select(r => r.Item).ToList(),
+            keywords.Search(query, candidates).Select(r => r.Item).ToList(),
+        ];
+        return ReciprocalRankFusion.Fuse(rankings, e => e.Id)
+            .Take(count)
+            .Select(f => Hit(f.Item, f.Score))
             .ToList();
     }
+
+    private static CatalogHit Hit(CatalogEntry e, double score) =>
+        new(e.Id, e.Policy, e.Title, e.Department, e.Summary, Math.Round(score, 4));
 
     /// <summary>Builds the catalog from its file on first use. Later calls return at once.</summary>
     public async Task EnsureBuiltAsync(string path, CancellationToken cancellationToken = default)
