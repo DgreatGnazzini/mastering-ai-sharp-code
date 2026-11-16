@@ -468,8 +468,15 @@ jobs:
             -e VectorStore__Provider=Postgres \
             -e AI__Provider=Ollama -e AI__Ollama__Endpoint=http://localhost:11434 \
             priorauthbot-api:ci
-          sleep 5
+          # Cold start: from docker run to the readiness probe answering 200 (ingestion done, PostgreSQL up).
+          start=$(date +%s.%N)
+          for i in $(seq 1 600); do
+            curl -sf -o /dev/null http://localhost:8080/health/ready && break
+            sleep 0.5
+          done
+          ready=$(awk -v a="$start" -v b="$(date +%s.%N)" 'BEGIN { print b - a }')
           docker ps -a
+          printf '\nCold start to ready: %.1f s\nAPI container memory after start: %s\n' "$ready" "$(docker stats --no-stream --format '{{.MemUsage}}' api)" >> eval-reports/container-images.md
 
       - name: Smoke test the running container
         run: |
