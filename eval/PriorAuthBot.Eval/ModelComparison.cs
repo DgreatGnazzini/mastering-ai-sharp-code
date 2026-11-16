@@ -212,7 +212,7 @@ internal static class ModelComparison
             Info("Output tokens per second", cl.OutputTokensPerSecond, kl.OutputTokensPerSecond);
             Info("Input tokens per answer", cl.AverageInputTokens, kl.AverageInputTokens);
             Info("Output tokens per answer", cl.AverageOutputTokens, kl.AverageOutputTokens);
-            Info("Cost per answer at the shadow price (USD)", (double)cl.CostPerAnswer, (double)kl.CostPerAnswer);
+            Info("Cost per 1,000 answers at the shadow price (USD)", (double)cl.CostPerAnswer * 1000, (double)kl.CostPerAnswer * 1000);
         }
 
         s.Append('\n');
@@ -230,7 +230,7 @@ internal static class ModelComparison
                 var entry = locks.Models.FirstOrDefault(m => m.Id == model || OllamaModelCheck.OllamaName(m) == model);
                 s.Append(entry is null
                     ? $"- {model}: NOT IN THE LOCK. Add it, with its license reviewed, before it can be approved.\n"
-                    : $"- {model}: {entry.Source}{(entry.Path is null ? string.Empty : "/" + entry.Path)} at {Short(entry.Revision)}, {entry.License} (commercial use {(entry.CommercialUse ? "allowed" : "NOT allowed")}), {(entry.IsPinned ? "pinned" : "NOT PINNED")}{(entry.ReviewedBy is null ? string.Empty : $", reviewed by {entry.ReviewedBy}")}.\n");
+                    : $"- {model}: {entry.Source}{(entry.Path is null ? string.Empty : "/" + entry.Path)} at {Short(entry.Revision)}, {entry.License} (commercial use {(entry.CommercialUse ? "allowed" : "NOT allowed")}), {(entry.IsPinned ? "pinned" : "NOT PINNED")}{(entry.ReviewedBy is null ? string.Empty : $", reviewed by {entry.ReviewedBy.TrimEnd('.')}")}.\n");
             }
         }
 
