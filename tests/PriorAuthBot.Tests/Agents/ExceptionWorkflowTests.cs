@@ -176,8 +176,10 @@ public sealed class ExceptionWorkflowTests(MockHrFactory hr) : IClassFixture<Moc
         Assert.Equal("demo-manager", run.Draft!.Approver.UserId);
         Assert.Empty(host.Get<IExceptionRegister>().All);
 
-        // The model's offered sentence is in the justification, where the manager reads it as the requester's claim.
-        Assert.Contains("already approved", run.Draft.Justification, StringComparison.Ordinal);
+        // Chapter 12: the model's sentence claimed a decision, so the manager gets the requester's own
+        // reason instead, labeled as theirs, and never PriorAuthBot saying it was approved.
+        Assert.DoesNotContain("has already approved", run.Draft.Justification, StringComparison.Ordinal);
+        Assert.StartsWith("The requester's reason, in their words:", run.Draft.Justification, StringComparison.Ordinal);
     }
 
     [Fact]

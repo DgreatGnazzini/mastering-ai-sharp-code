@@ -6,8 +6,14 @@ using PriorAuthBot.Core.Retrieval;
 
 namespace PriorAuthBot.Core.Rag;
 
-/// <summary>The numbered sources block sent to the model, and the chunks it contains.</summary>
-public sealed record AssembledContext(string Text, IReadOnlyList<RetrievedChunk> Sources, int TokenCount);
+/// <summary>
+/// The numbered sources block sent to the model, and the chunks it contains. <paramref name="Blocks"/>
+/// holds each source's text on its own, in the same order (chapter 12 marks each one separately).
+/// </summary>
+public sealed record AssembledContext(string Text, IReadOnlyList<RetrievedChunk> Sources, int TokenCount)
+{
+    public IReadOnlyList<string> Blocks { get; init; } = [];
+}
 
 /// <summary>
 /// Turns retrieved chunks into the sources block (chapter 7): best first, duplicates removed,
@@ -23,6 +29,7 @@ public sealed class ContextAssembler(TokenCounter tokens, IOptions<ContextOption
         var seenText = new HashSet<string>(StringComparer.Ordinal);
         var perDocument = new Dictionary<string, int>(StringComparer.Ordinal);
         var builder = new StringBuilder();
+        var blocks = new List<string>();
         var total = 0;
 
         foreach (var chunk in retrieved.OrderByDescending(c => c.Score))
@@ -47,12 +54,13 @@ public sealed class ContextAssembler(TokenCounter tokens, IOptions<ContextOption
             }
 
             builder.Append(block);
+            blocks.Add(block.TrimEnd());
             total += blockTokens;
             used.Add(chunk);
             perDocument[record.DocumentId] = perDocument.GetValueOrDefault(record.DocumentId) + 1;
         }
 
-        return new AssembledContext(builder.ToString().TrimEnd(), used, total);
+        return new AssembledContext(builder.ToString().TrimEnd(), used, total) { Blocks = blocks };
     }
 
     private static string Format(int number, ChunkRecord record)

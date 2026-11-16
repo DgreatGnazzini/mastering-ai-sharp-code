@@ -52,6 +52,7 @@ internal static partial class ChatEndpoint
             ChatFailureKind.Unavailable => Results.Problem("The model is unavailable. Try again shortly.", statusCode: StatusCodes.Status503ServiceUnavailable),
             ChatFailureKind.Timeout => Results.Problem("The model took too long to respond.", statusCode: StatusCodes.Status504GatewayTimeout),
             ChatFailureKind.ContentFiltered => Results.Problem("The request was blocked by the model provider's content filter.", statusCode: StatusCodes.Status422UnprocessableEntity),
+            ChatFailureKind.Blocked => Results.Problem(exception.Message, statusCode: StatusCodes.Status422UnprocessableEntity),
             _ => Results.Problem("Something went wrong talking to the model.", statusCode: StatusCodes.Status502BadGateway),
         };
     }

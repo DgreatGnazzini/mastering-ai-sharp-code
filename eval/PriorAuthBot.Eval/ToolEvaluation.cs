@@ -120,6 +120,12 @@ internal static class ToolEvaluation
             {
                 reply = await assistant.AskAsync(c.Question, new ToolCaller(set.Caller(c.User)), cancellationToken).ConfigureAwait(false);
             }
+            catch (Core.Security.PromptRejectedException ex)
+            {
+                // Chapter 12: the guardrails refused the request before the model saw it. No tool ran,
+                // which is the right outcome for an injection case.
+                reply = new AssistantReply(ex.Message, [], []);
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 error = $"{ex.GetType().Name}: {ex.Message}";

@@ -231,6 +231,61 @@ internal static class Reports
         return s.ToString();
     }
 
+    /// <summary>Chapter 12: the red-team suite, with the guardrails and without them, side by side.</summary>
+    public static string RedTeam(string provider, IReadOnlyList<RedTeamResult> guarded, RedTeamSummary withGuardrails, IReadOnlyList<RedTeamResult>? unguarded, RedTeamSummary? withoutGuardrails)
+    {
+        ArgumentNullException.ThrowIfNull(guarded);
+        ArgumentNullException.ThrowIfNull(withGuardrails);
+        var s = new StringBuilder();
+        s.Append(CultureInfo.InvariantCulture, $"### Red team, {provider}: {guarded.Count} attacks\n\n");
+        s.Append("| Metric | With guardrails | Without guardrails |\n|---|---|---|\n");
+        string Off(Func<RedTeamSummary, string> f) => withoutGuardrails is null ? "not run" : f(withoutGuardrails);
+        s.Append(CultureInfo.InvariantCulture, $"| Blocked before the model | {withGuardrails.Blocked} | {Off(x => x.Blocked.ToString(CultureInfo.InvariantCulture))} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Defended | {withGuardrails.Defended} | {Off(x => x.Defended.ToString(CultureInfo.InvariantCulture))} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Breached (absolute cases) | {withGuardrails.AbsoluteBreaches} | {Off(x => x.AbsoluteBreaches.ToString(CultureInfo.InvariantCulture))} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Breached (measured cases) | {withGuardrails.MeasuredBreaches} | {Off(x => x.MeasuredBreaches.ToString(CultureInfo.InvariantCulture))} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Attack success rate | {withGuardrails.SuccessRate:0.00} | {Off(x => x.SuccessRate.ToString("0.00", CultureInfo.InvariantCulture))} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Errors | {withGuardrails.Errors} | {Off(x => x.Errors.ToString(CultureInfo.InvariantCulture))} |\n");
+        s.Append(CultureInfo.InvariantCulture, $"| Time per case | {(guarded.Count == 0 ? 0 : guarded.Average(r => r.Elapsed.TotalSeconds)):0.0} s | {(unguarded is null || unguarded.Count == 0 ? "-" : unguarded.Average(r => r.Elapsed.TotalSeconds).ToString("0.0", CultureInfo.InvariantCulture) + " s")} |\n\n");
+
+        s.Append("| OWASP | Cases | Breached with | Breached without |\n|---|---|---|---|\n");
+        foreach (var (owasp, (cases, breaches)) in withGuardrails.ByOwasp)
+        {
+            var off = withoutGuardrails?.ByOwasp.TryGetValue(owasp, out var o) == true ? o.Breaches.ToString(CultureInfo.InvariantCulture) : "-";
+            s.Append(CultureInfo.InvariantCulture, $"| {owasp} | {cases} | {breaches} | {off} |\n");
+        }
+
+        s.Append("\n| Case | OWASP | Technique | Path | Gate | With guardrails | Without | Findings |\n|---|---|---|---|---|---|---|---|\n");
+        foreach (var r in guarded)
+        {
+            var other = unguarded?.FirstOrDefault(u => u.Case.Id == r.Case.Id);
+            var findings = r.Error ?? string.Join("; ", r.Findings);
+            if (other is { Outcome: RedTeamOutcome.Breached })
+            {
+                findings += (findings.Length > 0 ? "; " : string.Empty) + "without: " + string.Join("; ", other.Findings);
+            }
+
+            s.Append(CultureInfo.InvariantCulture,
+                $"| {r.Case.Id} | {r.Case.Owasp} | {r.Case.Technique} | {r.Case.Path} | {r.Case.Gate} | {r.Outcome} | {other?.Outcome.ToString() ?? "-"} | {findings.Replace("|", "\\|", StringComparison.Ordinal)} |\n");
+        }
+
+        // The answers behind every breach, so a reviewer can see what got through without rerunning.
+        var breached = guarded.Where(r => r.Outcome == RedTeamOutcome.Breached).Select(r => ("with", r))
+            .Concat((unguarded ?? []).Where(r => r.Outcome == RedTeamOutcome.Breached).Select(r => ("without", r)))
+            .ToList();
+        if (breached.Count > 0)
+        {
+            s.Append("\nAnswers behind each breach:\n\n");
+            foreach (var (mode, r) in breached)
+            {
+                var answer = r.Answer.ReplaceLineEndings(" ");
+                s.Append(CultureInfo.InvariantCulture, $"- {r.Case.Id} ({mode} guardrails): {(answer.Length > 300 ? answer[..300] + "..." : answer)}\n");
+            }
+        }
+
+        return s.Append('\n').ToString();
+    }
+
     public static string Gate(string provider, GateResult gate, ProviderBaseline proposed)
     {
         ArgumentNullException.ThrowIfNull(gate);

@@ -65,7 +65,7 @@ public static partial class McpToolVetting
             yield return string.Create(CultureInfo.InvariantCulture, $"longer than {MaxDescriptionLength} characters ({text.Length})");
         }
 
-        if (text.Any(IsInvisible))
+        if (Security.HiddenText.Contains(text))
         {
             yield return "contains invisible or direction-changing Unicode characters";
         }
@@ -76,14 +76,8 @@ public static partial class McpToolVetting
         }
     }
 
-    // Zero-width characters, bidirectional overrides, and Unicode tag characters (U+E0000 to U+E007F),
-    // which render as nothing and can spell out a whole hidden instruction.
-    private static bool IsInvisible(char c) =>
-        c is '​' or '‌' or '‍' or '⁠' or '﻿'
-        || c is >= '‪' and <= '‮'
-        || c is >= '⁦' and <= '⁩'
-        || char.IsHighSurrogate(c) && c == '\uDB40';
-
+    // Zero-width characters, bidirectional overrides, and Unicode tag characters are found by
+    // HiddenText (chapter 12), which the guardrails share with this check.
     [GeneratedRegex(
         @"<\s*/?\s*(important|system|instructions?)\s*>|ignore (all |any )?(previous|prior|above|other) (instructions|rules)|do not (tell|mention|inform|show)|(don't|never) (tell|mention|inform)|system prompt|before (using|calling) (this|any) tool|other tools?|you must (also )?(call|read|send|include)|(api[_ ]?key|password|token|secret|\.ssh|\.env)\b|https?://",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
