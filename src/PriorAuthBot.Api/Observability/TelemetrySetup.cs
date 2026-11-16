@@ -1,9 +1,11 @@
+using Azure.Monitor.OpenTelemetry.Exporter;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PriorAuthBot.Core;
+using PriorAuthBot.Core.Hosting;
 using PriorAuthBot.Core.Observability;
 
 namespace PriorAuthBot.Api.Observability;
@@ -13,7 +15,10 @@ namespace PriorAuthBot.Api.Observability;
 /// <see cref="System.Diagnostics.ActivitySource"/>, <see cref="System.Diagnostics.Metrics.Meter"/>,
 /// and <see cref="ILogger"/>; this is the one place that names an exporter. Under Aspire, the
 /// AppHost sets OTEL_EXPORTER_OTLP_ENDPOINT to its dashboard. In Azure (chapter 14), the same OTLP
-/// exporter points at an OpenTelemetry collector or Azure Monitor. With neither, nothing is exported.
+/// exporter can point at an OpenTelemetry collector, and chapter 14 adds Azure Monitor: when an
+/// Application Insights connection string is set, traces, metrics, and logs go there too, signed in
+/// with the app's managed identity (the Application Insights resource has local authentication off,
+/// so the connection string alone cannot send anything). With neither, nothing is exported.
 /// </summary>
 internal static class TelemetrySetup
 {
@@ -22,11 +27,22 @@ internal static class TelemetrySetup
     public static void AddPriorAuthBotTelemetry(this WebApplicationBuilder builder)
     {
         var otlp = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+        var azureMonitor = builder.Configuration["Telemetry:AzureMonitor:ConnectionString"] ?? builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+        var credential = string.IsNullOrWhiteSpace(azureMonitor) ? null : AzureIdentity.CreateCredential(AzureIdentity.Options(builder.Configuration));
+        void AzureMonitor(AzureMonitorExporterOptions options)
+        {
+            options.ConnectionString = azureMonitor;
+            options.Credential = credential;
+        }
 
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
             logging.IncludeScopes = true;
+            if (credential is not null)
+            {
+                logging.AddAzureMonitorLogExporter(AzureMonitor);
+            }
         });
 
         var telemetry = builder.Services.AddOpenTelemetry()
@@ -49,6 +65,13 @@ internal static class TelemetrySetup
         if (otlp)
         {
             telemetry.UseOtlpExporter();
+        }
+
+        if (credential is not null)
+        {
+            telemetry
+                .WithTracing(tracing => tracing.AddAzureMonitorTraceExporter(AzureMonitor))
+                .WithMetrics(metrics => metrics.AddAzureMonitorMetricExporter(AzureMonitor));
         }
     }
 }

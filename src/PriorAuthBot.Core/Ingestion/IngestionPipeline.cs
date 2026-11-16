@@ -30,7 +30,12 @@ public sealed partial class IngestionPipeline(
     public async Task<IngestionReport> SyncAsync(IAsyncEnumerable<SourceDocument> documents, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(documents);
-        await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
+        // Chapter 14: in Azure the migration job creates the table and the API's role may not create
+        // anything, so only ask for the table when it is missing (a local database, a test).
+        if (!await collection.CollectionExistsAsync(cancellationToken).ConfigureAwait(false))
+        {
+            await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         // Chunk 0 of every document carries the document's hash and chunk count.
         var indexed = new Dictionary<string, ChunkRecord>(StringComparer.Ordinal);

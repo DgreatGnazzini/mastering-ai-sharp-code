@@ -8,6 +8,19 @@ public sealed class UsageOptions
 {
     public const string SectionName = "Usage";
 
+    /// <summary>
+    /// Where the day's usage is counted. <c>InMemory</c> is one process's memory, which is right for a
+    /// laptop and wrong for anything with more than one replica: with three replicas, every user gets
+    /// three budgets. <c>Postgres</c> (chapter 14) is one shared count in the application database.
+    /// </summary>
+    public string Ledger { get; set; } = InMemoryLedger;
+
+    /// <summary>Create the ledger's tables at startup. True for local databases; false where the migration job owns the schema.</summary>
+    public bool CreateSchema { get; set; } = true;
+
+    public const string InMemoryLedger = "InMemory";
+    public const string PostgresLedger = "Postgres";
+
     /// <summary>Turns the per-user budgets on. Metering and cost metrics run either way.</summary>
     public bool QuotasEnabled { get; set; } = true;
 

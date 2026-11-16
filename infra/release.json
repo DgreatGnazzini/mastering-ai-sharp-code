@@ -1,0 +1,7 @@
+{
+  "description": "What the next production release runs (chapter 14). The deploy workflow reads it. Changing chatDeployment is a model rollout: the new deployment must already exist in main.bicep's chatDeployments, and the release goes through the same canary and eval gates as a code change.",
+  "chatDeployment": "gpt-4-1-mini-2025-04-14",
+  "canaryPercent": 10,
+  "canaryMinutes": 15,
+  "maxCanaryFailureRate": 0.01
+}

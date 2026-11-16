@@ -27,6 +27,9 @@ public sealed class AuditOptions
     /// </summary>
     public string OnWriteFailure { get; set; } = FailClosed;
 
+    /// <summary>Chapter 14: a second, immutable copy of the log in Blob Storage, and the chain's anchors.</summary>
+    public AuditArchiveOptions Archive { get; set; } = new();
+
     public const string FailClosed = "FailClosed";
     public const string FailOpen = "FailOpen";
 }

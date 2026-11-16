@@ -1,4 +1,5 @@
-using Azure.Identity;
+using PriorAuthBot.Core.Data;
+using PriorAuthBot.Core.Hosting;
 using Azure.Search.Documents.Indexes;
 using CommunityToolkit.VectorData.AzureAISearch;
 using CommunityToolkit.VectorData.InMemory;
@@ -80,17 +81,18 @@ public static class VectorStoreServiceCollectionExtensions
     {
         var options = configuration.GetSection(VectorStoreOptions.SectionName).Get<VectorStoreOptions>() ?? new VectorStoreOptions();
         var collectionName = CollectionName;
-        string? postgres = null;
         switch (options.Provider)
         {
             case "InMemory":
                 services.AddSingleton<VectorStore>(_ => new InMemoryVectorStore());
                 break;
             case "Postgres":
-                var connectionString = configuration.GetConnectionString("priorauthbot")
+                _ = configuration.GetConnectionString("priorauthbot")
                     ?? throw new InvalidOperationException("ConnectionStrings:priorauthbot is required when VectorStore:Provider is Postgres.");
-                postgres = WithIterativeScan(connectionString);
-                services.AddSingleton<VectorStore>(_ => new PostgresVectorStore(postgres));
+
+                // Chapter 14: one shared data source, which signs in with Entra ID in Azure.
+                services.AddPriorAuthBotPostgres(configuration);
+                services.AddSingleton<VectorStore>(sp => new PostgresVectorStore(sp.GetRequiredService<NpgsqlDataSource>(), ownsDataSource: false));
                 break;
             case "Qdrant":
                 var qdrant = options.Qdrant;
@@ -100,7 +102,7 @@ public static class VectorStoreServiceCollectionExtensions
             case "AzureAISearch":
                 var endpoint = options.AzureAISearch.Endpoint
                     ?? throw new InvalidOperationException("VectorStore:AzureAISearch:Endpoint is required when VectorStore:Provider is AzureAISearch.");
-                services.AddSingleton<VectorStore>(_ => new AzureAISearchVectorStore(new SearchIndexClient(endpoint, new DefaultAzureCredential())));
+                services.AddSingleton<VectorStore>(sp => new AzureAISearchVectorStore(new SearchIndexClient(endpoint, sp.AzureCredential())));
                 collectionName = AzureAISearchIndexName;
                 break;
             default:
@@ -119,7 +121,6 @@ public static class VectorStoreServiceCollectionExtensions
                 services.AddSingleton<IKeywordSearch>(sp => new InMemoryKeywordSearch(sp.GetRequiredService<VectorStoreCollection<Guid, ChunkRecord>>()));
                 break;
             case "Postgres":
-                services.AddSingleton(_ => NpgsqlDataSource.Create(postgres!));
                 services.AddSingleton<IKeywordSearch>(sp => new PostgresKeywordSearch(
                     sp.GetRequiredService<NpgsqlDataSource>(), sp.GetRequiredService<VectorStoreCollection<Guid, ChunkRecord>>(), collectionName));
                 break;

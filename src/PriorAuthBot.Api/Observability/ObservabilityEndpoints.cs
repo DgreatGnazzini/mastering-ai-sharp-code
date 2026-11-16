@@ -22,10 +22,10 @@ internal static class ObservabilityEndpoints
 
     public static void MapObservability(this RouteGroupBuilder api)
     {
-        api.MapGet("/usage", (ClaimsPrincipal user, CallerIdentityFactory identities, ITokenLedger ledger, IOptionsMonitor<UsageOptions> options) =>
+        api.MapGet("/usage", async (ClaimsPrincipal user, CallerIdentityFactory identities, ITokenLedger ledger, IOptionsMonitor<UsageOptions> options, CancellationToken cancellationToken) =>
         {
             var caller = identities.Create(user);
-            var usage = ledger.ForUser(caller.UserId);
+            var usage = await ledger.ForUserAsync(caller.UserId, cancellationToken);
             var limit = options.CurrentValue.DailyLimitFor(caller.Groups);
             return Results.Ok(new UsageResponse(usage.Day, usage.TotalTokens, limit, Math.Max(0, limit - usage.TotalTokens), usage.ModelCalls, usage.Cost, ledger.ResetsAt));
         });
@@ -67,7 +67,7 @@ internal static class ObservabilityEndpoints
         audit.MapGet("/verify", async (AuditLog log, CancellationToken cancellationToken) => Results.Ok(await log.VerifyAsync(cancellationToken)));
 
         // The cost dashboard's numbers for today, across every user.
-        audit.MapGet("/usage", (ITokenLedger ledger) => Results.Ok(ledger.Today()));
+        audit.MapGet("/usage", async (ITokenLedger ledger, CancellationToken cancellationToken) => Results.Ok(await ledger.TodayAsync(cancellationToken)));
 
         audit.MapGet("/feedback/candidates", async (DateTimeOffset? from, DateTimeOffset? to, FeedbackService feedback, CancellationToken cancellationToken) =>
         {

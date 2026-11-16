@@ -1,6 +1,7 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
-using Azure.Identity;
+using PriorAuthBot.Core.Data;
+using PriorAuthBot.Core.Hosting;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +43,7 @@ public static class AiServiceCollectionExtensions
     public static IServiceCollection AddPriorAuthBotAI(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
+        services.AddPriorAuthBotAzureIdentity(configuration);
         services.AddPriorAuthBotSecurity(configuration);
         services.AddPriorAuthBotUsage(configuration);
         if (configuration.GetValue<bool>($"{AiOptions.SectionName}:{nameof(AiOptions.CacheResponses)}")
@@ -56,7 +58,7 @@ public static class AiServiceCollectionExtensions
             return options.Provider switch
             {
                 "Offline" => new HashingEmbeddingGenerator(),
-                "AzureOpenAI" => CreateAzureOpenAI(options.AzureOpenAI)
+                "AzureOpenAI" => CreateAzureOpenAI(options.AzureOpenAI, sp.AzureCredential())
                     .GetEmbeddingClient(options.AzureOpenAI.EmbeddingDeployment)
                     .AsIEmbeddingGenerator(ChunkDimensions.Size),
                 "OpenAI" => CreateOpenAI(options.OpenAI)
@@ -94,6 +96,14 @@ public static class AiServiceCollectionExtensions
         services.AddOptions<UsageOptions>().Bind(configuration.GetSection(UsageOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<TokenCounter>();
+        // Chapter 14: with more than one replica, the ledger has to be shared, or every user gets one budget per replica.
+        if (configuration[$"{UsageOptions.SectionName}:{nameof(UsageOptions.Ledger)}"] == UsageOptions.PostgresLedger)
+        {
+            services.AddPriorAuthBotPostgres(configuration);
+            services.TryAddSingleton<ITokenLedger>(sp => new PostgresTokenLedger(
+                sp.GetRequiredService<Npgsql.NpgsqlDataSource>(), sp.GetRequiredService<IOptionsMonitor<UsageOptions>>(), sp.GetRequiredService<TimeProvider>()));
+        }
+
         services.TryAddSingleton<ITokenLedger>(sp => new InMemoryTokenLedger(
             sp.GetRequiredService<IOptionsMonitor<UsageOptions>>(), sp.GetRequiredService<TimeProvider>()));
         return services;
@@ -207,7 +217,7 @@ public static class AiServiceCollectionExtensions
         return options.Provider switch
         {
             "Offline" => new OfflineChatClient(),
-            "AzureOpenAI" => CreateAzureOpenAI(options.AzureOpenAI)
+            "AzureOpenAI" => CreateAzureOpenAI(options.AzureOpenAI, sp.AzureCredential())
                 .GetChatClient(Pick(purpose, options.AzureOpenAI.ClassifierDeployment, options.AzureOpenAI.VisionDeployment, options.AzureOpenAI.ChatDeployment))
                 .AsIChatClient(),
             "OpenAI" => CreateOpenAI(options.OpenAI)
@@ -235,13 +245,14 @@ public static class AiServiceCollectionExtensions
     /// <summary>
     /// Azure OpenAI through its OpenAI-compatible v1 endpoint, signed in with Entra ID: no API key
     /// exists to leak. Locally, DefaultAzureCredential uses your Azure CLI or Visual Studio sign-in;
-    /// in Azure, the app's managed identity (chapter 14).
+    /// in Azure, the app's managed identity (chapter 14). The credential is the one
+    /// <see cref="AzureIdentity.AddPriorAuthBotAzureIdentity"/> registered.
     /// </summary>
-    private static OpenAIClient CreateAzureOpenAI(AzureOpenAIOptions options)
+    public static OpenAIClient CreateAzureOpenAI(AzureOpenAIOptions options, Azure.Core.TokenCredential credential)
     {
         var endpoint = options.Endpoint ?? throw new InvalidOperationException(
             "AI:AzureOpenAI:Endpoint is not set. Use the resource's v1 endpoint, such as https://<resource>.openai.azure.com/openai/v1/.");
-        var policy = new BearerTokenPolicy(new DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default");
+        var policy = new BearerTokenPolicy(credential, AzureIdentity.CognitiveServicesScope);
 
         // The token-policy constructor is still marked experimental in OpenAI 2.x (OPENAI001). It is
         // the documented way to call Azure OpenAI's v1 endpoint with Entra ID; chapter 15 revisits it.

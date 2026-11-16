@@ -1,0 +1,15 @@
+# Secret scanning (chapter 14): gitleaks' default rules, plus the few places this repository holds
+# values that look like secrets on purpose. Every path here is reviewed: a new entry needs a reason.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Development-only and test values, never valid anywhere"
+paths = [
+  # The local Postgres password and the mock HR API's signing key, for docker compose and Development only.
+  '''src/PriorAuthBot\.Api/appsettings\.Development\.json''',
+  '''samples/mock-apis/DeductibleDynamics\.MockHr/appsettings\.Development\.json''',
+  '''compose\.yaml''',
+  # Tests assert that fake secrets are found and refused.
+  '''tests/''',
+]

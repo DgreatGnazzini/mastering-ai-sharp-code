@@ -25,6 +25,9 @@ public sealed class RetrievalBoundaryTests
         // Chapter 13: the audit context takes the records SecureRetriever returns, and keeps only
         // their IDs and labels. It has no collection to query.
         "src/PriorAuthBot.Core/Usage/AiRequestContext.cs",
+
+        // Chapter 14: the migration job creates the table from ChunkRecord's attributes. It reads nothing.
+        "src/PriorAuthBot.Core/Data/DatabaseMigrator.cs",
     ];
 
     [Fact]

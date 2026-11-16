@@ -40,3 +40,4 @@ Rules:
 | `ch11` | [docs/chapters/ch11.md](chapters/ch11.md) |
 | `ch12` | [docs/chapters/ch12.md](chapters/ch12.md) |
 | `ch13` | [docs/chapters/ch13.md](chapters/ch13.md) |
+| `ch14` | [docs/chapters/ch14.md](chapters/ch14.md) |

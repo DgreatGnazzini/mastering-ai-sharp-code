@@ -104,6 +104,13 @@ jobs:
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-method "PriorAuthBot.Tests.FilteredSearchExperiment.Pgvector" --output Detailed
 
+      - name: The shared token ledger, the migration's privileges, and the smoke test (chapter 14)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.Deployment.PostgresDeploymentTests"
+          --filter-class "PriorAuthBot.Tests.Deployment.SmokeTestTests" --output Detailed
+
       - name: Add the reports to the job summary
         if: always()
         run: |
@@ -301,3 +308,245 @@ jobs:
         with:
           name: rag-eval-reports
           path: eval-reports/
+
+  # ---- Chapter 14: the supply-chain and deployment gates. The new jobs pin every action and tool
+  # image by SHA or digest, as the deploy workflow does.
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The whole history, not only the last commit: a secret deleted in a later commit is still
+      # in the repository and still has to be rotated.
+      - name: gitleaks over every commit
+        run: |
+          docker run --rm -v "$PWD":/repo -w /repo \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --config .gitleaks.toml --redact --verbose --report-format json --report-path gitleaks.json /repo
+          echo "Commits scanned: $(git rev-list --count HEAD), findings: $(jq length gitleaks.json)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  dependency-review:
+    name: Dependency review
+    # Needs the repository's dependency graph (Settings > Code security > Dependency graph). Turn it
+    # on, then set the repository variable DEPENDENCY_REVIEW to true; until then the job is skipped,
+    # and the nightly vulnerable-package check in "Build and test" still covers known advisories.
+    if: github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # Fails a pull request that adds a package with a known HIGH or CRITICAL advisory, or a
+      # license the book's MIT code cannot ship with.
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
+          comment-summary-in-pr: on-failure
+
+  infrastructure:
+    name: Infrastructure (Bicep build and lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # The linter rules are in infra/bicepconfig.json; a warning there is an error here.
+      - name: Build and lint the templates
+        run: |
+          az bicep install
+          az bicep version
+          for file in infra/main.bicep infra/entra/app-registration.bicep; do
+            echo "::group::$file"
+            az bicep build --file "$file" --stdout > /dev/null 2> lint.txt || { cat lint.txt; exit 1; }
+            cat lint.txt
+            if grep -q -i "warning" lint.txt; then echo "::error file=$file::Bicep linter warnings"; exit 1; fi
+            echo "::endgroup::"
+          done
+          echo "Resources in main.bicep (compiled): $(az bicep build --file infra/main.bicep --stdout | jq '[.. | objects | select(has("type") and has("apiVersion"))] | length')" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate the parameters file
+        run: jq -e '.parameters | has("environmentName") and has("apiClientId")' infra/main.parameters.json
+
+  container:
+    name: Container image (build, scan, SBOM, smoke test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: priorauthbot-ci
+          POSTGRES_DB: priorauthbot
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+
+      - name: Build the images
+        run: |
+          rev="${GITHUB_SHA::7}"
+          start=$(date +%s)
+          docker build -f src/PriorAuthBot.Api/Dockerfile --build-arg REVISION="$rev" -t priorauthbot-api:ci .
+          docker build -f eval/PriorAuthBot.Eval/Dockerfile -t priorauthbot-eval:ci .
+          mkdir -p eval-reports
+          {
+            echo "## Container images (chapter 14)"
+            echo
+            echo "| Image | Size (MB) |"
+            echo "|---|---:|"
+            for i in priorauthbot-api:ci priorauthbot-eval:ci; do
+              echo "| $i | $(( $(docker image inspect "$i" --format '{{.Size}}') / 1000000 )) |"
+            done
+            echo
+            echo "Build time: $(( $(date +%s) - start )) s"
+          } > eval-reports/container-images.md
+
+      - name: Scan the images (HIGH or CRITICAL with a fix fails)
+        run: |
+          for i in priorauthbot-api:ci priorauthbot-eval:ci; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/out \
+              aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+              image --format json --output "/out/trivy-${i%%:*}.json" --no-progress "$i"
+            counts=$(jq -r '[.Results[]?.Vulnerabilities[]?] | group_by(.Severity) | map("\(.[0].Severity)=\(length)") | join(", ")' "trivy-${i%%:*}.json")
+            fixable=$(jq '[.Results[]?.Vulnerabilities[]? | select((.Severity == "HIGH" or .Severity == "CRITICAL") and (.FixedVersion // "") != "")] | length' "trivy-${i%%:*}.json")
+            echo "| $i | ${counts:-none} | $fixable |" >> trivy.md
+            [ "$fixable" = 0 ] || failed=1
+          done
+          { echo; echo "| Image | Vulnerabilities by severity | HIGH or CRITICAL with a fix |"; echo "|---|---|---:|"; cat trivy.md; } >> eval-reports/container-images.md
+          exit ${failed:-0}
+
+      - name: Software bill of materials
+        if: always()
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/out \
+            anchore/syft:v1.57.1@sha256:03215d0e98b661d0ecbc8575dbc14d65be1743b5de5df6410aecb7e80f95b060 \
+            priorauthbot-api:ci -o spdx-json=/out/sbom.spdx.json
+          { echo; echo "SBOM (SPDX) packages in the API image: $(jq '.packages | length' sbom.spdx.json)";
+            echo "NuGet packages: $(jq '[.packages[] | select((.externalRefs // []) | map(.referenceLocator) | any(startswith("pkg:nuget")))] | length' sbom.spdx.json)"; } >> eval-reports/container-images.md
+
+      - name: Install Ollama with the embedding model
+        run: |
+          curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
+          nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          ollama pull nomic-embed-text:v1.5
+
+      # The image as it runs in Azure (Production, Entra sign-in, PostgreSQL for the vectors, the
+      # audit log, and the ledger), except that PostgreSQL takes a password from an environment
+      # variable and the model is local. The startup checks run for real: a missing setting stops it.
+      - name: Run the container in Production
+        run: |
+          docker run -d --name api --network host \
+            -e ASPNETCORE_HTTP_PORTS=8080 \
+            -e Postgres__Authentication=Password \
+            -e "ConnectionStrings__priorauthbot=Host=localhost;Database=priorauthbot;Username=postgres;Password=priorauthbot-ci" \
+            -e Auth__Mode=Entra \
+            -e Auth__JwtBearer__Authority=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000001/v2.0 \
+            -e Auth__JwtBearer__Audience=api://priorauthbot \
+            -e Tools__Downstream__ClientId=22222222-2222-2222-2222-222222222222 \
+            -e Usage__Ledger=Postgres -e Usage__CreateSchema=true \
+            -e Audit__Store=Postgres -e Audit__CreateSchema=true \
+            -e VectorStore__Provider=Postgres \
+            -e AI__Provider=Ollama -e AI__Ollama__Endpoint=http://localhost:11434 \
+            priorauthbot-api:ci
+          # Cold start: from docker run to the readiness probe answering 200 (ingestion done, PostgreSQL up).
+          start=$(date +%s.%N)
+          for i in $(seq 1 600); do
+            curl -sf -o /dev/null http://localhost:8080/health/ready && break
+            sleep 0.5
+          done
+          ready=$(awk -v a="$start" -v b="$(date +%s.%N)" 'BEGIN { print b - a }')
+          docker ps -a
+          printf '\nCold start to ready: %.1f s\nAPI container memory after start: %s\n' "$ready" "$(docker stats --no-stream --format '{{.MemUsage}}' api)" >> eval-reports/container-images.md
+
+      - name: Smoke test the running container
+        run: |
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release \
+            -- --smoke http://localhost:8080/ --expect-revision "${GITHUB_SHA::7}" --wait 600 --out eval-reports
+
+      - name: Container logs
+        if: always()
+        run: |
+          docker logs api 2>&1 | tail -n 200 || true
+          docker stats --no-stream api || true
+
+      - name: Add the reports to the job summary
+        if: always()
+        run: |
+          cat eval-reports/*.md || true
+          cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+  model-canary:
+    # Chapter 14: what the canary gate does with a candidate model, on a model we know is weaker.
+    # The deploy pipeline runs the same suite against a new Azure OpenAI deployment before any user
+    # traffic reaches it; here a smaller Ollama model stands in for "the new version". The job is
+    # expected to report a failed gate, so its verdict is recorded rather than failing CI.
+    name: Model canary (candidate model against the baselines)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PRIORAUTHBOT_TEST_OLLAMA: http://localhost:11434
+      PRIORAUTHBOT_TEST_CHAT_MODEL: llama3.2:1b
+      PRIORAUTHBOT_TEST_EMBEDDING_MODEL: nomic-embed-text:v1.5
+      PRIORAUTHBOT_TEST_JUDGE_MODEL: qwen2.5:7b
+      PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports/canary
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          global-json-file: global.json
+
+      - name: Install Ollama and pull the models
+        run: |
+          curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION=0.40.16 sh
+          nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_JUDGE_MODEL"
+
+      - name: Eval and red-team gates on the candidate model
+        id: gate
+        continue-on-error: true
+        run: >-
+          dotnet run --project eval/PriorAuthBot.Eval --configuration Release
+          -- --provider Ollama --answers --redteam --out eval-reports/canary --execution canary-${{ github.sha }}
+
+      - name: Gate verdict
+        if: always()
+        run: |
+          echo "Candidate llama3.2:1b gate: ${{ steps.gate.outcome }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          cat eval-reports/canary/*.md || true
+          cat eval-reports/canary/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: model-canary-reports
+          path: eval-reports/canary/
