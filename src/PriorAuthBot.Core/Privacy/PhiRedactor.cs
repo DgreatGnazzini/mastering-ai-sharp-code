@@ -46,9 +46,11 @@ public static partial class PhiRedactor
     /// Redaction on the way out (chapter 12). An identifier may appear in an answer only if it was in
     /// what the model was given (<paramref name="ground"/>): a model has no business producing a member
     /// ID or phone number it was not shown, whether it remembered one, guessed one, or was talked into
-    /// one. Social Security numbers are always redacted, because no answer needs one.
+    /// one. Social Security numbers are always redacted, because no answer needs one. When the request
+    /// held content that is not text, such as a scanned form, <paramref name="ground"/> cannot say what
+    /// the model was shown, so pass <paramref name="groundIsComplete"/> false: only SSNs are redacted then.
     /// </summary>
-    public static RedactionResult RedactUngrounded(string text, string ground)
+    public static RedactionResult RedactUngrounded(string text, string ground, bool groundIsComplete = true)
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(ground);
@@ -66,6 +68,11 @@ public static partial class PhiRedactor
         });
 
         text = Replace(text, Ssn(), "SSN", always: true);
+        if (!groundIsComplete)
+        {
+            return new RedactionResult(text, counts);
+        }
+
         text = Replace(text, MemberId(), "MEMBER_ID");
         text = Replace(text, Mrn(), "MRN");
         text = Replace(text, Email(), "EMAIL");
