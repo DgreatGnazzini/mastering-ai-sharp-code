@@ -4,6 +4,7 @@
 // be extended but never shortened or removed, by anyone.
 param location string
 param tags object
+@minLength(3)
 param name string
 param retentionDays int
 param writerPrincipalId string

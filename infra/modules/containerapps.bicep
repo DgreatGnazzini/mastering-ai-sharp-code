@@ -52,28 +52,15 @@ resource environmentLogs 'Microsoft.Insights/diagnosticSettings@2021-05-01-previ
 }
 
 // Inside the network, *.<environment domain> resolves to the environment's internal load balancer.
-resource environmentZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: environment.properties.defaultDomain
-  location: 'global'
-  tags: tags
-}
-
-resource environmentRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
-  parent: environmentZone
-  name: '*'
-  properties: {
-    ttl: 300
-    aRecords: [{ ipv4Address: environment.properties.staticIp }]
-  }
-}
-
-resource environmentLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: environmentZone
-  name: 'apps-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: { id: vnetId }
+// A module, because the zone's name is the environment's domain, which exists only once the
+// environment does, and a resource name in this file must be known before deployment starts.
+module environmentDns 'environment-dns.bicep' = {
+  name: 'cae-${prefix}-dns'
+  params: {
+    tags: tags
+    domain: environment.properties.defaultDomain
+    staticIp: environment.properties.staticIp
+    vnetId: vnetId
   }
 }
 
@@ -141,6 +128,9 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
       registries: [{ server: registryServer, identity: identities.api.id }]
     }
     template: {
+      // Provisioning re-applies the stable revision's own template (image, model, suffix), so it
+      // never creates a revision of its own; only the pipeline's canary step does.
+      revisionSuffix: empty(stableRevision) ? null : last(split(stableRevision, '--'))
       containers: [
         {
           name: 'api'

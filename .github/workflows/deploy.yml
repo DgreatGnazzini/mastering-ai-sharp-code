@@ -252,7 +252,7 @@ jobs:
             az containerapp ingress traffic set -g "$RG" -n "$APP" --revision-weight "$STABLE=100" -o none
           fi
           az containerapp update -g "$RG" -n "$APP" --image "${{ steps.push.outputs.api }}" --revision-suffix "r${SHA::7}" \
-            --set-env-vars "AI__AzureOpenAI__ChatDeployment=$deployment" "PriorAuthBot__Revision=${SHA::7}" -o none
+            --set-env-vars "AI__AzureOpenAI__ChatDeployment=$deployment" -o none
           revision="$APP--r${SHA::7}"
           az containerapp revision label add -g "$RG" -n "$APP" --label canary --revision "$revision" --no-prompt -o none
           echo "revision=$revision" >> "$GITHUB_OUTPUT"

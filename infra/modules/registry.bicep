@@ -1,6 +1,7 @@
 // The container registry (chapter 14). Images are code, not data, so this is the one service that
 // keeps a public endpoint: the GitHub-hosted runner pushes to it. It accepts only Entra ID: no admin
-// user, no anonymous pull, and only the three managed identities may pull.
+// user, and only the three managed identities may pull. (Anonymous pull is off by default; the
+// property that turns it on exists only in preview API versions.)
 param location string
 param tags object
 param name string
@@ -13,7 +14,6 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   sku: { name: 'Standard' }
   properties: {
     adminUserEnabled: false
-    anonymousPullEnabled: false
     publicNetworkAccess: 'Enabled'
     policies: {
       retentionPolicy: { status: 'disabled' }

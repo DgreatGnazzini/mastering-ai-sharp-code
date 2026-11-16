@@ -1,0 +1,4 @@
+# Findings reviewed and accepted (chapter 14). Each line is a gitleaks fingerprint: commit:file:rule:line.
+# The forged JWT the smoke test sends (a token no tenant issued, signed with the word "signature").
+# It is built at run time since the next commit, but stays in this commit's history.
+1aafb4bf3ada4d38aa88f879be31721db6c6393d:eval/PriorAuthBot.Eval/SmokeTest.cs:jwt:24

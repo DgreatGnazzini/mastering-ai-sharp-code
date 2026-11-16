@@ -30,7 +30,6 @@ public sealed partial class InfrastructureTests
     [InlineData("modules/storage.bicep", "allowSharedKeyAccess: false")]
     [InlineData("modules/postgres.bicep", "passwordAuth: 'Disabled'")]
     [InlineData("modules/registry.bicep", "adminUserEnabled: false")]
-    [InlineData("modules/registry.bicep", "anonymousPullEnabled: false")]
     [InlineData("modules/keyvault.bicep", "enableRbacAuthorization: true")]
     [InlineData("modules/keyvault.bicep", "enablePurgeProtection: true")]
     public void EveryServiceAcceptsOnlyEntraTokens(string file, string setting) =>
@@ -44,6 +43,7 @@ public sealed partial class InfrastructureTests
             var text = File.ReadAllText(file);
             Assert.DoesNotMatch(KeyFunctions(), text);
             Assert.DoesNotContain("@secure()", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("anonymousPullEnabled: true", text, StringComparison.Ordinal);
             Assert.DoesNotContain("secretRef", text, StringComparison.Ordinal);
         }
     }
