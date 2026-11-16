@@ -6,6 +6,10 @@ internal static class TestPaths
 
     public static string SampleDocuments => Path.Combine(RepoRoot, "samples", "documents");
 
+    public static string SampleFiles => Path.Combine(RepoRoot, "samples", "files");
+
+    public static string SampleIntake => Path.Combine(RepoRoot, "samples", "intake");
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

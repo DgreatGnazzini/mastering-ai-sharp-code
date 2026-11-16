@@ -5,11 +5,20 @@ using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Core;
 using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Classification;
+using PriorAuthBot.Core.Identity;
+using PriorAuthBot.Core.Intake;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddPriorAuthBot(builder.Configuration);
 builder.Services.AddProblemDetails();
+
+// Intake forms (chapter 4): the member directory the extracted fields are checked against.
+builder.Services.AddOptions<IntakeOptions>().Bind(builder.Configuration.GetSection(IntakeOptions.SectionName));
+builder.Services.AddSingleton(sp => MemberDirectory.Load(Path.GetFullPath(Path.Combine(
+    builder.Environment.ContentRootPath, sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<IntakeOptions>>().Value.MembersPath))));
+builder.Services.AddSingleton(sp => new IntakeService(
+    sp.GetRequiredService<IntakeFormExtractor>(), sp.GetRequiredService<MemberDirectory>(), PriorAuthBotServiceCollectionExtensions.CreateOcr(sp)));
 
 // Sign-in. Production uses Entra ID tokens; local development can use demo personas.
 var authMode = builder.Configuration["Auth:Mode"] ?? "Entra";
@@ -68,6 +77,7 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseGroupOverageHandling();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -94,6 +104,10 @@ api.MapPost("/classify", async (ClassifyRequest request, QuestionClassifier clas
         return Results.Problem("The model did not return a valid classification.", statusCode: StatusCodes.Status502BadGateway);
     }
 });
+
+// Chapter 4: extract a scanned prior authorization form into typed fields, and route it.
+// A bearer-token API has no cookies to forge, so the form upload needs no antiforgery token.
+api.MapPost("/intake", IntakeEndpoint.HandleAsync).DisableAntiforgery();
 
 await app.RunAsync();
 

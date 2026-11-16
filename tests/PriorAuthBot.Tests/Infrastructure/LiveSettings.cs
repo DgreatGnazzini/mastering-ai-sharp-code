@@ -11,6 +11,9 @@ internal static class LiveSettings
 
     public static string ChatModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_CHAT_MODEL") ?? "llama3.2:3b";
 
+    /// <summary>A model that reads images, for chapter 4.</summary>
+    public static string VisionModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_VISION_MODEL") ?? "qwen2.5vl:3b";
+
     /// <summary>Folder for reports that CI uploads as artifacts.</summary>
     public static string ReportDirectory
     {
@@ -27,5 +30,6 @@ internal static class LiveSettings
         ["AI:Provider"] = "Ollama",
         ["AI:Ollama:Endpoint"] = Ollama,
         ["AI:Ollama:ChatModel"] = ChatModel,
+        ["AI:Ollama:VisionModel"] = VisionModel,
     };
 }

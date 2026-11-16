@@ -1,0 +1,10 @@
+{
+  "title": "Business Travel Policy",
+  "policy": "FIN-118",
+  "department": "AllStaff",
+  "allowedGroups": [
+    "AllStaff"
+  ],
+  "sensitivity": "Internal",
+  "phi": false
+}

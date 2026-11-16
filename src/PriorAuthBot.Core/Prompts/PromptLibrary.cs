@@ -14,6 +14,7 @@ namespace PriorAuthBot.Core.Prompts;
 public static partial class PromptLibrary
 {
     public const string ClassifyQuestion = "classify-question.v1";
+    public const string ExtractIntakeForm = "extract-intake-form.v1";
 
     private static readonly ConcurrentDictionary<string, string> Cache = new();
 

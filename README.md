@@ -65,6 +65,12 @@ Classify a question into department, sensitivity, and a PHI flag (chapter 3):
 curl -X POST http://localhost:5080/classify -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"How many PTO days do I get?"}'
 ```
 
+Extract a scanned prior authorization form into typed fields, as a claims analyst (chapter 4; needs `qwen2.5vl:3b`):
+
+```bash
+curl -X POST http://localhost:5080/intake -H "X-Demo-User: claims" -F "file=@samples/intake/intake-form-001.png;type=image/png"
+```
+
 No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md).
 
 ## Configuration and secrets
@@ -87,6 +93,7 @@ dotnet user-secrets set "AI:OpenAI:ApiKey" "<your-key>"
 | `docs/chapters/` | A short README per chapter: what it adds and how to run it |
 | `tests/PriorAuthBot.Tests` | Unit and regression tests |
 | `samples/documents` | Deductible Dynamics' fictional policies, protocols, and procedures |
+| `samples/files`, `samples/intake` | PDF, Word, and scanned samples, and an intake form (chapter 4) |
 | `Directory.Packages.props` | Every package version used in the book, pinned |
 
 ## Package versions
