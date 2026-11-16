@@ -15,6 +15,8 @@ public sealed record SearchRequest(string Query);
 
 public sealed record SearchHit(string DocumentId, string Title, string Section, double Score);
 
+public sealed record AskRequest(string Question);
+
 internal static class GroupOverageHandling
 {
     /// <summary>Group overage means we do not know the caller's groups, so the request fails closed with 403.</summary>

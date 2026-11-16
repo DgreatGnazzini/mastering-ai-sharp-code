@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.VectorData;
 using PriorAuthBot.Core;
+using PriorAuthBot.Core.Documents;
+using PriorAuthBot.Core.Ingestion;
 using PriorAuthBot.Core.Retrieval;
 
 namespace PriorAuthBot.Tests.Infrastructure;
@@ -27,8 +29,7 @@ internal sealed class RagTestHost : IAsyncDisposable
             ["AI:Provider"] = "Offline",
             ["VectorStore:Provider"] = "InMemory",
             ["Retrieval:Top"] = "6",
-            // The offline embedder's scores mean little, so tests that need a threshold set their own.
-            ["Retrieval:MinScore"] = "0",
+            ["Retrieval:MinScore"] = GoldenSet.Load().Offline.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
         foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())
         {
@@ -51,6 +52,9 @@ internal sealed class RagTestHost : IAsyncDisposable
         where T : notnull => _services.GetRequiredService<T>();
 
     public VectorStoreCollection<Guid, ChunkRecord> Collection => Get<VectorStoreCollection<Guid, ChunkRecord>>();
+
+    public Task<IngestionReport> IngestSamplesAsync() =>
+        Get<IngestionPipeline>().SyncAsync(MarkdownDocumentLoader.LoadDirectoryAsync(TestPaths.SampleDocuments));
 
     public ValueTask DisposeAsync() => _services.DisposeAsync();
 }

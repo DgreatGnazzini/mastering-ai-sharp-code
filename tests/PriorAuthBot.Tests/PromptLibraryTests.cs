@@ -7,6 +7,7 @@ public class PromptLibraryTests
 {
     [Theory]
     [InlineData(PromptLibrary.ClassifyQuestion)]
+    [InlineData(PromptLibrary.GroundedAnswer)]
     public void EveryPromptLoadsWithUnixLineEndings(string name)
     {
         var prompt = PromptLibrary.Get(name);
@@ -28,7 +29,7 @@ public class PromptLibraryTests
     public void UnusedValueIsAnError()
     {
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            PromptLibrary.Render(PromptLibrary.ClassifyQuestion, new Dictionary<string, string> { ["departments"] = "x", ["sensitivities"] = "y", ["tone"] = "friendly" }));
+            PromptLibrary.Render(PromptLibrary.GroundedAnswer, new Dictionary<string, string> { ["tone"] = "friendly" }));
 
         Assert.Contains("tone", ex.Message, StringComparison.Ordinal);
     }

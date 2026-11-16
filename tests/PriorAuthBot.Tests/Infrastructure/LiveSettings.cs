@@ -17,12 +17,18 @@ internal static class LiveSettings
 
     public static string ChatModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_CHAT_MODEL") ?? "llama3.2:3b";
 
+    /// <summary>
+    /// The model that grades groundedness. A judge must follow the evaluator's output format
+    /// exactly, which small models often fail to do, so it can be larger than the chat model.
+    /// </summary>
+    public static string JudgeModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_JUDGE_MODEL") ?? ChatModel;
+
     /// <summary>A model that reads images, for chapter 4.</summary>
     public static string VisionModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_VISION_MODEL") ?? "qwen2.5vl:3b";
 
     public static string EmbeddingModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_EMBEDDING_MODEL") ?? "nomic-embed-text:v1.5";
 
-    /// <summary>Folder for reports that CI uploads as artifacts.</summary>
+    /// <summary>Folder for reports (chunking table, groundedness scores) that CI uploads as artifacts.</summary>
     public static string ReportDirectory
     {
         get
@@ -40,5 +46,6 @@ internal static class LiveSettings
         ["AI:Ollama:ChatModel"] = ChatModel,
         ["AI:Ollama:EmbeddingModel"] = EmbeddingModel,
         ["AI:Ollama:VisionModel"] = VisionModel,
+        ["Retrieval:MinScore"] = GoldenSet.Load().Ollama.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture),
     };
 }

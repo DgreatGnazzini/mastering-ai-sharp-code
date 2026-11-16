@@ -30,13 +30,12 @@ dotnet build MasteringAI.slnx
 dotnet test --solution MasteringAI.slnx
 ```
 
-The tests need no model, database, or network: they use offline stand-ins. Tests that need real infrastructure are skipped unless you opt in:
+The tests need no model, database, or network: they use an offline embedder and an in-memory vector store. Tests that need real infrastructure are skipped unless you opt in:
 
 | Variable | Runs |
 |---|---|
-| `PRIORAUTHBOT_TEST_POSTGRES` | The vector store integration tests against PostgreSQL with pgvector |
-| `PRIORAUTHBOT_TEST_QDRANT` | The same tests against Qdrant |
-| `PRIORAUTHBOT_TEST_OLLAMA` | The live model checks against Ollama |
+| `PRIORAUTHBOT_TEST_POSTGRES` | The golden set against PostgreSQL with pgvector |
+| `PRIORAUTHBOT_TEST_OLLAMA` | The golden set, groundedness check, and chunking experiment against Ollama |
 
 ## Run PriorAuthBot locally
 
@@ -55,7 +54,14 @@ docker compose exec ollama ollama pull llama3.2:3b
 dotnet run --project src/PriorAuthBot.Api
 ```
 
-In Development, sign in as a demo persona with the `X-Demo-User` header (`nurse`, `contractor`, `claims`, `hr`, `compliance`). Chat with the model directly, streamed as server-sent events (chapter 2):
+In Development, sign in as a demo persona with the `X-Demo-User` header (`nurse`, `contractor`, `claims`, `hr`, `compliance`):
+
+```bash
+curl -X POST http://localhost:5080/ask -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"question":"Can I work remotely?"}'
+curl -X POST http://localhost:5080/ask -H "X-Demo-User: contractor" -H "Content-Type: application/json" -d '{"question":"Can I work remotely?"}'
+```
+
+Chat with the model directly, streamed as server-sent events (chapter 2):
 
 ```bash
 curl -N -X POST http://localhost:5080/chat -H "X-Demo-User: nurse" -H "Content-Type: application/json" -d '{"message":"What is prior authorization?"}'
@@ -79,7 +85,7 @@ Extract a scanned prior authorization form into typed fields, as a claims analys
 curl -X POST http://localhost:5080/intake -H "X-Demo-User: claims" -F "file=@samples/intake/intake-form-001.png;type=image/png"
 ```
 
-No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search.
+No Docker? Set `"AI": { "Provider": "Offline" }` to run with no model at all. To use Azure OpenAI, set `AI:Provider` to `AzureOpenAI` and `AI:AzureOpenAI:Endpoint`, and sign in with `az login`; there is no key. See [docs/chapters/ch02.md](docs/chapters/ch02.md). See [docs/chapters/ch06.md](docs/chapters/ch06.md) for pgvector, Qdrant, and Azure AI Search, and [docs/chapters/ch07.md](docs/chapters/ch07.md) for OpenAI.
 
 ## Configuration and secrets
 

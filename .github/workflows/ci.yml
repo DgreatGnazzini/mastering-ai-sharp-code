@@ -141,9 +141,11 @@ jobs:
           cat eval-reports/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
   rag-eval:
-    # Live checks against a real local model (Ollama). Chapter 2: streaming latency. Chapter 3: the labeled classification questions. Chapter 4: reading scans with a vision model. Chapter 5: semantic search over the policy catalog.
+    # Chapter 7: the golden set against a real local model (Ollama), plus one groundedness check
+    # with Microsoft.Extensions.AI.Evaluation. Chapter 2: streaming latency. Chapter 3: the labeled
+    # classification questions.
     # CPU only, so it takes several minutes.
-    name: Live model checks (Ollama)
+    name: RAG eval (golden set on Ollama)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -153,6 +155,8 @@ jobs:
       PRIORAUTHBOT_TEST_CHAT_MODEL: llama3.2:3b
       PRIORAUTHBOT_TEST_EMBEDDING_MODEL: nomic-embed-text:v1.5
       PRIORAUTHBOT_TEST_VISION_MODEL: qwen2.5vl:3b
+      # llama3.2:3b could not follow the groundedness evaluator's output format (2 of 13 scored).
+      PRIORAUTHBOT_TEST_JUDGE_MODEL: qwen2.5:7b
       PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
     steps:
       - uses: actions/checkout@v5
@@ -163,7 +167,8 @@ jobs:
 
       # Installed on the runner rather than as a service container: in a container on the hosted
       # runner, Ollama ran inference on a single thread and every answer took minutes.
-      # The models need several GB of disk. If the disk fills, the runner itself dies and leaves no logs.
+      # Four models need about 11 GB, more than the hosted runner has free by default. When the disk
+      # filled, the runner itself died partway through the golden set and left no logs.
       - name: Free disk space for the models
         run: |
           df -h /
@@ -179,9 +184,15 @@ jobs:
           curl -sf http://localhost:11434/api/version || { cat "$RUNNER_TEMP/ollama.log"; exit 1; }
           ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
+          ollama pull "$PRIORAUTHBOT_TEST_JUDGE_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_VISION_MODEL"
           df -h /
           free -h
+
+      - name: Run the golden set and the groundedness check
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveRagTests" --output Detailed
 
       - name: Stream one reply and time it (chapter 2)
         if: always()

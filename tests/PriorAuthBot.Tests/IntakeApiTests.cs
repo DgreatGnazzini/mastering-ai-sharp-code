@@ -74,6 +74,8 @@ public sealed class IntakeApiTests
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("AI:Provider", "Offline");
+            builder.UseSetting("VectorStore:Provider", "InMemory");
+            builder.UseSetting("Ingestion:DocumentsPath", TestPaths.SampleDocuments);
             builder.UseSetting("Intake:MembersPath", Path.Combine(TestPaths.SampleIntake, "members.json"));
             builder.ConfigureTestServices(services => services.AddKeyedSingleton<IChatClient>(AiServiceCollectionExtensions.VisionKey, Vision));
         }

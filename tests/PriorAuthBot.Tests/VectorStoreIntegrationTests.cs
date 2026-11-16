@@ -1,6 +1,4 @@
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
-using PriorAuthBot.Core.Documents;
 using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Tests.Infrastructure;
 using Xunit;
@@ -8,33 +6,13 @@ using Xunit;
 namespace PriorAuthBot.Tests;
 
 /// <summary>
-/// The same permission checks against a real vector store (chapter 6): no caller sees a chunk
-/// outside their groups, writing the same records twice changes nothing, and a caller with no
-/// groups gets nothing. Each store gets a subclass that says how to reach it; the tests are
-/// identical, which is the point of the abstraction. The store is filled with one record per
-/// sample document; chapter 7's ingestion pipeline replaces that with real chunks.
+/// The same permission checks against a real vector store (chapter 6): the golden set, an
+/// idempotent resync, and a caller with no groups. Each store gets a subclass that says how to reach
+/// it; the tests are identical, which is the point of the abstraction.
 /// </summary>
 public abstract class VectorStoreIntegrationTests : IAsyncLifetime
 {
-    private static readonly CallerIdentity[] Callers =
-    [
-        new("demo-nurse", "Nurse", ["AllStaff", "Clinical"]),
-        new("demo-contractor", "Contractor", ["Contractors"]),
-        new("demo-claims", "Claims analyst", ["AllStaff", "Claims"]),
-        new("demo-hr", "HR business partner", ["AllStaff", "HR"]),
-        new("demo-compliance", "Privacy officer", ["AllStaff", "Compliance"]),
-    ];
-
-    private static readonly string[] Questions =
-    [
-        "How many PTO days do I get?",
-        "Can I work remotely?",
-        "What are the sepsis screening criteria?",
-        "How do I appeal a denied claim?",
-        "How do I report a privacy incident?",
-        "What happened in incident 2026-031?",
-    ];
-
+    private static readonly GoldenSet Set = GoldenSet.Load();
     private RagTestHost? _host;
 
     protected abstract string? SkipReason { get; }
@@ -52,50 +30,43 @@ public abstract class VectorStoreIntegrationTests : IAsyncLifetime
 
         _host = RagTestHost.Create(Settings);
         await Host.Collection.EnsureCollectionDeletedAsync(TestContext.Current.CancellationToken);
-        await Host.Collection.EnsureCollectionExistsAsync(TestContext.Current.CancellationToken);
-        await Host.Collection.UpsertAsync(await LoadSamplesAsync(), TestContext.Current.CancellationToken);
+        await Host.IngestSamplesAsync();
     }
 
     [Fact]
-    public async Task NoCallerSeesAnotherGroupsDocuments()
+    public async Task GoldenSetHolds()
     {
         Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);
         var retriever = Host.Get<SecureRetriever>();
 
-        foreach (var caller in Callers)
+        foreach (var goldenCase in Set.Cases)
         {
-            foreach (var question in Questions)
-            {
-                var results = await retriever.SearchAsync(question, caller, TestContext.Current.CancellationToken);
+            var caller = Set.Caller(goldenCase.User);
+            var results = await retriever.SearchAsync(goldenCase.Question, caller, TestContext.Current.CancellationToken);
 
-                Assert.All(results, r => Assert.True(caller.IsInAnyGroup(r.Record.AllowedGroups), $"{caller.UserId}: {r.Record.ChunkId} leaked."));
+            Assert.All(results, r => Assert.True(caller.IsInAnyGroup(r.Record.AllowedGroups), $"{goldenCase.Id}: {r.Record.ChunkId} leaked."));
+            Assert.All(results, r => Assert.DoesNotContain(r.Record.DocumentId, goldenCase.Forbidden));
+            foreach (var expected in goldenCase.Expected)
+            {
+                Assert.True(results.Any(r => r.Record.DocumentId == expected), $"{goldenCase.Id}: expected {expected}.");
+            }
+
+            if (goldenCase.ExpectDecline)
+            {
+                Assert.True(results.Count == 0, $"{goldenCase.Id}: expected no results, got {results.Count}.");
             }
         }
     }
 
     [Fact]
-    public async Task EachCallerFindsTheirOwnDocuments()
+    public async Task ResyncIsIdempotent()
     {
         Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);
-        var nurse = Callers[0];
 
-        var results = await Host.Get<SecureRetriever>().SearchAsync("sepsis screening escalation to the physician", nurse, TestContext.Current.CancellationToken);
+        var report = await Host.IngestSamplesAsync();
 
-        Assert.Contains(results, r => r.Record.DocumentId == "sepsis-screening-protocol");
-    }
-
-    [Fact]
-    public async Task WritingTheSameRecordsAgainChangesNothing()
-    {
-        Assert.SkipWhen(SkipReason is not null, SkipReason ?? string.Empty);
-        var records = await LoadSamplesAsync();
-
-        // The keys are derived from the document ID and chunk index, so a second write overwrites.
-        await Host.Collection.UpsertAsync(records, TestContext.Current.CancellationToken);
-
-        var stored = await Host.Collection.GetAsync(records.Select(r => r.Key), cancellationToken: TestContext.Current.CancellationToken).ToListAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(records.Count, stored.Count);
-        Assert.Equal(records.Select(r => r.ChunkId).Order(), stored.Select(r => r.ChunkId).Order());
+        Assert.Equal(0, report.ChunksWritten);
+        Assert.Equal(14, report.Unchanged);
     }
 
     [Fact]
@@ -116,34 +87,6 @@ public abstract class VectorStoreIntegrationTests : IAsyncLifetime
         }
 
         GC.SuppressFinalize(this);
-    }
-
-    /// <summary>One record per sample document, with the document's access list copied onto it. A document nobody may see is not stored.</summary>
-    private async Task<List<ChunkRecord>> LoadSamplesAsync()
-    {
-        var embedder = Host.Get<IEmbeddingGenerator<string, Embedding<float>>>();
-        var documents = await MarkdownDocumentLoader.LoadDirectoryAsync(TestPaths.SampleDocuments, TestContext.Current.CancellationToken)
-            .Where(d => !d.Access.IsDenyAll)
-            .ToListAsync(TestContext.Current.CancellationToken);
-        var embeddings = await embedder.GenerateAsync(documents.Select(d => d.Text), cancellationToken: TestContext.Current.CancellationToken);
-
-        return [.. documents.Select((d, i) => new ChunkRecord
-        {
-            Key = ChunkRecord.MakeKey(d.Id, 0),
-            ChunkId = ChunkRecord.MakeChunkId(d.Id, 0),
-            DocumentId = d.Id,
-            ChunkIndex = 0,
-            ChunkCount = 1,
-            Title = d.Title,
-            PolicyNumber = d.PolicyNumber,
-            Text = d.Text,
-            SourcePath = Path.GetFileName(d.SourcePath),
-            AllowedGroups = [.. d.Access.AllowedGroups],
-            Sensitivity = d.Access.Sensitivity,
-            Department = d.Department,
-            ContainsPhi = d.Access.ContainsPhi,
-            Embedding = embeddings[i].Vector,
-        })];
     }
 }
 

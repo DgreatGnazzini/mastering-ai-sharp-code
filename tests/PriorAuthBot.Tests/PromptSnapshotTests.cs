@@ -26,6 +26,10 @@ public class PromptSnapshotTests
         Snapshot.Match(PromptLibrary.ClassifyQuestion, Describe(model.Requests[0], model.Options[0]));
     }
 
+    [Fact]
+    public void GroundedAnswer() =>
+        Snapshot.Match(PromptLibrary.GroundedAnswer, PromptLibrary.Get(PromptLibrary.GroundedAnswer));
+
     private static string Describe(IReadOnlyList<ChatMessage> messages, ChatOptions? options)
     {
         var text = new StringBuilder();

@@ -55,6 +55,8 @@ public sealed class CatalogApiTests
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("AI:Provider", "Offline");
+            builder.UseSetting("VectorStore:Provider", "InMemory");
+            builder.UseSetting("Ingestion:DocumentsPath", TestPaths.SampleDocuments);
             builder.UseSetting("Catalog:Path", TestPaths.PolicyCatalog);
         }
     }

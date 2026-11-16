@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.AI;
 using PriorAuthBot.Api;
 using PriorAuthBot.Api.Auth;
+using PriorAuthBot.Api.Ingestion;
 using PriorAuthBot.Core;
 using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
+using PriorAuthBot.Core.Rag;
 using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Core.Search;
 
@@ -16,6 +18,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddPriorAuthBot(builder.Configuration);
 builder.Services.AddProblemDetails();
+
+// Ingestion runs in the background and keeps the index in sync with the documents (chapter 7).
+builder.Services.AddOptions<IngestionWorkerOptions>().Bind(builder.Configuration.GetSection(IngestionWorkerOptions.SectionName));
+builder.Services.AddSingleton<IngestionWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<IngestionWorker>());
 
 // The policy catalog (chapter 5): about 200 summaries, embedded on first use and searched in memory.
 builder.Services.AddOptions<CatalogOptions>().Bind(builder.Configuration.GetSection(CatalogOptions.SectionName));
@@ -137,6 +144,13 @@ api.MapPost("/search", async (SearchRequest request, ClaimsPrincipal user, Calle
     var caller = identities.Create(user);
     var results = await retriever.SearchAsync(request.Query, caller, cancellationToken);
     return results.Select(r => new SearchHit(r.Record.DocumentId, r.Record.Title, r.Record.Section, Math.Round(r.Score, 3)));
+});
+
+// Chapter 7: grounded answers from the documents the caller can see.
+api.MapPost("/ask", async (AskRequest request, ClaimsPrincipal user, CallerIdentityFactory identities, RagAnswerService rag, CancellationToken cancellationToken) =>
+{
+    var caller = identities.Create(user);
+    return await rag.AskAsync(request.Question, caller, cancellationToken);
 });
 
 await app.RunAsync();

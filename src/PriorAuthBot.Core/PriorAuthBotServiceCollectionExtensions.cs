@@ -9,13 +9,15 @@ using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Documents;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
+using PriorAuthBot.Core.Ingestion;
+using PriorAuthBot.Core.Rag;
 using PriorAuthBot.Core.Retrieval;
 
 namespace PriorAuthBot.Core;
 
 public static class PriorAuthBotServiceCollectionExtensions
 {
-    /// <summary>Registers everything PriorAuthBot needs, as of chapter 6.</summary>
+    /// <summary>Registers everything PriorAuthBot needs, as of chapter 7 (and the chapters before it).</summary>
     public static IServiceCollection AddPriorAuthBot(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddPriorAuthBotAI(configuration);
@@ -28,6 +30,15 @@ public static class PriorAuthBotServiceCollectionExtensions
         services.AddOptions<DocumentOptions>().Bind(configuration.GetSection(DocumentOptions.SectionName));
         services.AddSingleton(sp => new DocumentLoader(CreateOcr(sp), sp.GetService<Microsoft.Extensions.Logging.ILogger<DocumentLoader>>()));
         services.AddSingleton(sp => new IntakeFormExtractor(sp.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.VisionKey)));
+
+        services.AddOptions<ChunkingOptions>().Bind(configuration.GetSection(ChunkingOptions.SectionName));
+        services.AddSingleton<IChunker>(sp => new StructuralChunker(
+            sp.GetRequiredService<TokenCounter>(), sp.GetRequiredService<IOptions<ChunkingOptions>>().Value));
+        services.AddSingleton<IngestionPipeline>();
+
+        services.AddOptions<ContextOptions>().Bind(configuration.GetSection(ContextOptions.SectionName));
+        services.AddSingleton<ContextAssembler>();
+        services.AddSingleton<RagAnswerService>();
 
         services.AddOptions<GroupMappingOptions>().Bind(configuration.GetSection(GroupMappingOptions.SectionName));
         services.AddSingleton<CallerIdentityFactory>();

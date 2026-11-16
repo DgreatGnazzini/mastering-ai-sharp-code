@@ -107,6 +107,8 @@ public sealed class ChatApiTests
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("AI:Provider", "Offline");
+            builder.UseSetting("VectorStore:Provider", "InMemory");
+            builder.UseSetting("Ingestion:DocumentsPath", TestPaths.SampleDocuments);
             builder.UseSetting("RateLimiting:Burst", burst.ToString(System.Globalization.CultureInfo.InvariantCulture));
             builder.UseSetting("RateLimiting:RequestsPerMinute", "1");
             builder.ConfigureTestServices(services => services.AddSingleton(model));
