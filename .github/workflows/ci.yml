@@ -55,7 +55,7 @@ jobs:
           fi
 
   rag-eval:
-    # Live checks against a real local model (Ollama). Chapter 2: streaming latency. Chapter 3: the labeled classification questions. Chapter 4: reading scans with a vision model.
+    # Live checks against a real local model (Ollama). Chapter 2: streaming latency. Chapter 3: the labeled classification questions. Chapter 4: reading scans with a vision model. Chapter 5: semantic search over the policy catalog.
     # CPU only, so it takes several minutes.
     name: Live model checks (Ollama)
     runs-on: ubuntu-latest
@@ -65,6 +65,7 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       PRIORAUTHBOT_TEST_OLLAMA: http://localhost:11434
       PRIORAUTHBOT_TEST_CHAT_MODEL: llama3.2:3b
+      PRIORAUTHBOT_TEST_EMBEDDING_MODEL: nomic-embed-text:v1.5
       PRIORAUTHBOT_TEST_VISION_MODEL: qwen2.5vl:3b
       PRIORAUTHBOT_TEST_REPORTS: ${{ github.workspace }}/eval-reports
     steps:
@@ -90,6 +91,7 @@ jobs:
           nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
           curl -sf http://localhost:11434/api/version || { cat "$RUNNER_TEMP/ollama.log"; exit 1; }
+          ollama pull "$PRIORAUTHBOT_TEST_EMBEDDING_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_CHAT_MODEL"
           ollama pull "$PRIORAUTHBOT_TEST_VISION_MODEL"
           df -h /
@@ -106,6 +108,12 @@ jobs:
         run: >-
           dotnet test --project tests/PriorAuthBot.Tests --configuration Release
           -- --filter-class "PriorAuthBot.Tests.LiveClassifierTests" --output Detailed
+
+      - name: Search the policy catalog with embeddings (chapter 5)
+        if: always()
+        run: >-
+          dotnet test --project tests/PriorAuthBot.Tests --configuration Release
+          -- --filter-class "PriorAuthBot.Tests.LiveSemanticSearchTests" --output Detailed
 
       - name: Read scans with a vision model (chapter 4)
         if: always()

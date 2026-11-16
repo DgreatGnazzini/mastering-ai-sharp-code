@@ -9,6 +9,8 @@ public sealed record ClassifyRequest(string Question);
 
 public sealed record ClassifyResponse(QuestionIntent Intent, QuestionRoute Route);
 
+public sealed record CatalogSearchRequest(string Query, int? Top = null);
+
 internal static class GroupOverageHandling
 {
     /// <summary>Group overage means we do not know the caller's groups, so the request fails closed with 403.</summary>

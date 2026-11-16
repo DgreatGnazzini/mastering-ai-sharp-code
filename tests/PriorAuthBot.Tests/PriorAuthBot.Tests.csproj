@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="GoldenSet\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Catalog\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

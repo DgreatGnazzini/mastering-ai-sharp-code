@@ -138,6 +138,33 @@ public class AiServiceCollectionTests
         }
     }
 
+    [Theory]
+    [InlineData("Ollama", false)]
+    [InlineData("OpenAI", true)]
+    public void EmbeddingsGetThePhiGuardToo(string provider, bool guarded)
+    {
+        using var services = Build(new() { ["AI:Provider"] = provider, ["AI:OpenAI:ApiKey"] = "test-key-not-real" });
+
+        var generator = services.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+
+        Assert.Equal(guarded, generator.GetService<PhiGuardEmbeddingGenerator>() is not null);
+    }
+
+    [Fact]
+    public async Task EmbeddingCacheIsOptIn()
+    {
+        using var off = Build(new() { ["AI:Provider"] = "Offline" });
+        using var on = Build(new() { ["AI:Provider"] = "Offline", ["AI:CacheEmbeddings"] = "true" });
+
+        Assert.Null(off.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>().GetService<DistributedCachingEmbeddingGenerator<string, Embedding<float>>>());
+        var cached = on.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+        Assert.NotNull(cached.GetService<DistributedCachingEmbeddingGenerator<string, Embedding<float>>>());
+
+        var first = await cached.GenerateVectorAsync("Paid Time Off", cancellationToken: TestContext.Current.CancellationToken);
+        var second = await cached.GenerateVectorAsync("Paid Time Off", cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(first.ToArray(), second.ToArray());
+    }
+
     [Fact]
     public void MissingKeyFailsWithInstructions()
     {

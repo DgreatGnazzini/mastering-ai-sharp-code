@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.AI;
 using PriorAuthBot.Api;
 using PriorAuthBot.Api.Auth;
 using PriorAuthBot.Core;
@@ -7,11 +8,18 @@ using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Classification;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
+using PriorAuthBot.Core.Search;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddPriorAuthBot(builder.Configuration);
 builder.Services.AddProblemDetails();
+
+// The policy catalog (chapter 5): about 200 summaries, embedded on first use and searched in memory.
+builder.Services.AddOptions<CatalogOptions>().Bind(builder.Configuration.GetSection(CatalogOptions.SectionName));
+builder.Services.AddSingleton(sp => new PolicyCatalog(
+    sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>(),
+    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CatalogOptions>>().Value));
 
 // Intake forms (chapter 4): the member directory the extracted fields are checked against.
 builder.Services.AddOptions<IntakeOptions>().Bind(builder.Configuration.GetSection(IntakeOptions.SectionName));
@@ -108,6 +116,18 @@ api.MapPost("/classify", async (ClassifyRequest request, QuestionClassifier clas
 // Chapter 4: extract a scanned prior authorization form into typed fields, and route it.
 // A bearer-token API has no cookies to forge, so the form upload needs no antiforgery token.
 api.MapPost("/intake", IntakeEndpoint.HandleAsync).DisableAntiforgery();
+
+// Chapter 5: semantic search over the policy catalog, which every employee may read.
+api.MapPost("/catalog/search", async (CatalogSearchRequest request, PolicyCatalog catalog, Microsoft.Extensions.Options.IOptions<CatalogOptions> options, IHostEnvironment environment, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Query) || request.Query.Length > 500)
+    {
+        return Results.Problem("Send a query of 1 to 500 characters.", statusCode: StatusCodes.Status400BadRequest);
+    }
+
+    await catalog.EnsureBuiltAsync(Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.Value.Path)), cancellationToken);
+    return Results.Ok(await catalog.SearchAsync(request.Query, Math.Clamp(request.Top ?? options.Value.Top, 1, 20), cancellationToken));
+});
 
 await app.RunAsync();
 

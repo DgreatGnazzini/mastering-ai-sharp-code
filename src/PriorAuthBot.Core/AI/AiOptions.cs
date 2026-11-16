@@ -10,7 +10,7 @@ public sealed class AiOptions
 
     /// <summary>
     /// <c>Ollama</c> (local, the default), <c>AzureOpenAI</c>, <c>OpenAI</c>, or <c>Offline</c>.
-    /// Offline uses no model at all, so tests and CI run with no network.
+    /// Offline uses a deterministic hashing embedder and no chat model, so tests and CI run with no network.
     /// </summary>
     public string Provider { get; set; } = "Ollama";
 
@@ -27,6 +27,13 @@ public sealed class AiOptions
     /// so turn it on only where that data is allowed to sit (see chapter 2's security review).
     /// </summary>
     public bool CacheResponses { get; set; }
+
+    /// <summary>
+    /// Cache embeddings in memory (chapter 5), keyed by the text and the request options. The key
+    /// does not include the model, so clear the cache when you change embedding models. Off by
+    /// default for the same reason as <see cref="CacheResponses"/>: the cache holds the text it was given.
+    /// </summary>
+    public bool CacheEmbeddings { get; set; }
 
     /// <summary>
     /// Whether this provider may receive PHI (chapter 4). Leave it unset to get the default: true for
@@ -47,6 +54,9 @@ public sealed class OllamaOptions
 
     /// <summary>A smaller, faster model for classification. Empty means "use <see cref="ChatModel"/>".</summary>
     public string? ClassifierModel { get; set; }
+
+    /// <summary>nomic-embed-text returns 768 dimensions, which matches <see cref="Retrieval.ChunkRecord"/>.</summary>
+    public string EmbeddingModel { get; set; } = "nomic-embed-text:v1.5";
 
     /// <summary>A model that accepts images, for OCR and form extraction (chapter 4).</summary>
     public string VisionModel { get; set; } = "qwen2.5vl:3b";
@@ -77,6 +87,8 @@ public sealed class AzureOpenAIOptions
 
     /// <summary>A deployment that accepts images. Empty means "use <see cref="ChatDeployment"/>", which does for GPT-4.1 models.</summary>
     public string? VisionDeployment { get; set; }
+
+    public string EmbeddingDeployment { get; set; } = "text-embedding-3-small";
 }
 
 public sealed class OpenAIOptions
@@ -89,6 +101,8 @@ public sealed class OpenAIOptions
     public string? ClassifierModel { get; set; }
 
     public string? VisionModel { get; set; }
+
+    public string EmbeddingModel { get; set; } = "text-embedding-3-small";
 }
 
 public sealed class ResilienceOptions

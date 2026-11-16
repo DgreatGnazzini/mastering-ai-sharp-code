@@ -6,13 +6,15 @@ namespace PriorAuthBot.Tests.Infrastructure;
 /// </summary>
 internal static class LiveSettings
 {
-    /// <summary>An Ollama endpoint, such as <c>http://localhost:11434</c>, with the chat model pulled.</summary>
+    /// <summary>An Ollama endpoint, such as <c>http://localhost:11434</c>, with the chat and embedding models pulled.</summary>
     public static string? Ollama => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_OLLAMA");
 
     public static string ChatModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_CHAT_MODEL") ?? "llama3.2:3b";
 
     /// <summary>A model that reads images, for chapter 4.</summary>
     public static string VisionModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_VISION_MODEL") ?? "qwen2.5vl:3b";
+
+    public static string EmbeddingModel => Environment.GetEnvironmentVariable("PRIORAUTHBOT_TEST_EMBEDDING_MODEL") ?? "nomic-embed-text:v1.5";
 
     /// <summary>Folder for reports that CI uploads as artifacts.</summary>
     public static string ReportDirectory
@@ -30,6 +32,7 @@ internal static class LiveSettings
         ["AI:Provider"] = "Ollama",
         ["AI:Ollama:Endpoint"] = Ollama,
         ["AI:Ollama:ChatModel"] = ChatModel,
+        ["AI:Ollama:EmbeddingModel"] = EmbeddingModel,
         ["AI:Ollama:VisionModel"] = VisionModel,
     };
 }
