@@ -91,7 +91,12 @@ jobs:
     environment: production-override
     permissions: {}
     steps:
-      - run: echo "Gate override approved for ${{ needs.gates.outputs.sha }}. Reason ${{ toJSON(inputs.override_reason) }}." >> "$GITHUB_STEP_SUMMARY"
+      # The reason is free text from a person: it reaches the shell as an environment variable, never
+      # as ${{ }} inside the script, where a reason such as $(curl ...) would run as a command.
+      - env:
+          SHA: ${{ needs.gates.outputs.sha }}
+          REASON: ${{ inputs.override_reason }}
+        run: echo "Gate override approved for ${SHA}. Reason: ${REASON}" >> "$GITHUB_STEP_SUMMARY"
 
   image:
     name: Build, scan, and attest the images

@@ -118,6 +118,23 @@ public sealed partial class InfrastructureTests
     }
 
     [Fact]
+    public void FreeTextInputsReachScriptsOnlyThroughTheEnvironment()
+    {
+        // ${{ inputs.x }} inside a run script is pasted into the shell before it runs, so an input of
+        // $(curl ...) would execute. Inputs may appear only as environment variable values.
+        foreach (var name in new[] { "deploy.yml", "rollback.yml" })
+        {
+            foreach (var line in Workflow(name).ReplaceLineEndings("\n").Split('\n'))
+            {
+                if (line.Contains("${{ inputs.", StringComparison.Ordinal))
+                {
+                    Assert.Matches(InputAsEnvironmentVariable(), line);
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void TheReleaseWorkflowsStartWithNoPermissions()
     {
         Assert.Contains("\npermissions: {}\n", Workflow("deploy.yml").ReplaceLineEndings("\n"), StringComparison.Ordinal);
@@ -243,6 +260,9 @@ public sealed partial class InfrastructureTests
 
     [GeneratedRegex(@"-\d{4}-\d{2}-\d{2}$")]
     private static partial Regex VersionInName();
+
+    [GeneratedRegex(@"^\s+[A-Z_]+: \$\{\{ inputs\.[a-z_]+ \}\}\s*$")]
+    private static partial Regex InputAsEnvironmentVariable();
 
     [GeneratedRegex(@"(?m)^(?=  [a-z][\w-]*:\n)")]
     private static partial Regex JobStart();
