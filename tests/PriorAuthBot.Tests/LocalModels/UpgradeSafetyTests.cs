@@ -93,6 +93,32 @@ public partial class UpgradeSafetyTests
     }
 
     [Fact]
+    public void InTheLocalDeploymentOnlyTheApiCanReachTheModelServer()
+    {
+        // Ollama's API has no authentication: whoever reaches port 11434 can run, pull, or delete a
+        // model. compose.local-only.yaml keeps it on an internal network with no published port.
+        var compose = File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "compose.local-only.yaml")).ReplaceLineEndings("\n");
+
+        var ollama = Service(compose, "ollama");
+        var postgres = Service(compose, "postgres");
+        Assert.DoesNotContain("ports:", ollama, StringComparison.Ordinal);
+        Assert.DoesNotContain("ports:", postgres, StringComparison.Ordinal);
+        Assert.Contains("networks: [models]", ollama, StringComparison.Ordinal);
+        Assert.Contains("networks: [data]", postgres, StringComparison.Ordinal);
+        Assert.Contains("  models:\n    internal: true", compose, StringComparison.Ordinal);
+        Assert.Contains("  data:\n    internal: true", compose, StringComparison.Ordinal);
+        Assert.Contains("ASPNETCORE_ENVIRONMENT: LocalOnly", Service(compose, "api"), StringComparison.Ordinal);
+
+        static string Service(string yaml, string name)
+        {
+            var start = yaml.IndexOf($"\n  {name}:\n", StringComparison.Ordinal);
+            Assert.True(start >= 0, $"No {name} service.");
+            var next = Regex.Match(yaml[(start + 1)..], @"\n(  [a-z]+:\n|[a-z]+:)");
+            return next.Success ? yaml.Substring(start, next.Index + 1) : yaml[start..];
+        }
+    }
+
+    [Fact]
     public void EveryPreviewApiSuppressionIsInTheInventory()
     {
         // A suppressed experimental diagnostic (OPENAI001, MAAI001, ASPIRE010...) is a promise to come
