@@ -1,0 +1,19 @@
+{
+  "analyzers": {
+    "core": {
+      "enabled": true,
+      "rules": {
+        "outputs-should-not-contain-secrets": { "level": "error" },
+        "secure-secrets-in-params": { "level": "error" },
+        "use-secure-value-for-secure-inputs": { "level": "error" },
+        "no-hardcoded-env-urls": { "level": "warning" },
+        "no-unused-params": { "level": "error" },
+        "no-unused-vars": { "level": "error" },
+        "use-recent-api-versions": { "level": "off" }
+      }
+    }
+  },
+  "extensions": {
+    "microsoftGraphV1": "br:mcr.microsoft.com/bicep/extensions/microsoftgraph/v1.0:1.0.0"
+  }
+}

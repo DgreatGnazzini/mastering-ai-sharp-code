@@ -18,12 +18,12 @@ public sealed record DailyUsage(DateOnly Day, long InputTokens, long OutputToken
 /// </summary>
 public interface ITokenLedger
 {
-    UserUsage ForUser(string userId);
+    ValueTask<UserUsage> ForUserAsync(string userId, CancellationToken cancellationToken = default);
 
-    DailyUsage Today();
+    ValueTask<DailyUsage> TodayAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Adds a call's usage. Returns the spend alert thresholds this charge crossed, usually none.</summary>
-    IReadOnlyList<double> Charge(string userId, long inputTokens, long outputTokens, decimal cost);
+    ValueTask<IReadOnlyList<double>> ChargeAsync(string userId, long inputTokens, long outputTokens, decimal cost, CancellationToken cancellationToken = default);
 
     /// <summary>When today's budgets reset: the next UTC midnight.</summary>
     DateTimeOffset ResetsAt { get; }
@@ -47,6 +47,13 @@ public sealed class InMemoryTokenLedger(Microsoft.Extensions.Options.IOptionsMon
     }
 
     private DateOnly Day => DateOnly.FromDateTime(_time.GetUtcNow().UtcDateTime);
+
+    public ValueTask<UserUsage> ForUserAsync(string userId, CancellationToken cancellationToken = default) => ValueTask.FromResult(ForUser(userId));
+
+    public ValueTask<DailyUsage> TodayAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult(Today());
+
+    public ValueTask<IReadOnlyList<double>> ChargeAsync(string userId, long inputTokens, long outputTokens, decimal cost, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(Charge(userId, inputTokens, outputTokens, cost));
 
     public UserUsage ForUser(string userId)
     {

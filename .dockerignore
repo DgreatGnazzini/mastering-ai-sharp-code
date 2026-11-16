@@ -1,0 +1,14 @@
+# Chapter 14: what never goes into an image. Build output is rebuilt inside the image, and the rest
+# is either local state (eval cache, reports, models) or not needed at run time.
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.vscode/
+.eval-cache/
+eval-reports/
+models/
+**/*.user
+**/appsettings.Development.json
+**/secrets.json

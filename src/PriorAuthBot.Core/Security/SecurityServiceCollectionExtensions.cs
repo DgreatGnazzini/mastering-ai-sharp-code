@@ -1,4 +1,4 @@
-using Azure.Identity;
+using PriorAuthBot.Core.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,7 +24,7 @@ public static class SecurityServiceCollectionExtensions
             {
                 PromptShieldProviders.Heuristic => new HeuristicPromptShield(),
                 PromptShieldProviders.ContentSafety => new ContentSafetyPromptShield(
-                    new HttpClient { Timeout = TimeSpan.FromSeconds(10) }, new DefaultAzureCredential(), options),
+                    new HttpClient { Timeout = TimeSpan.FromSeconds(10) }, sp.AzureCredential(), options),
                 PromptShieldProviders.None => new NoPromptShield(),
                 _ => throw new InvalidOperationException($"Unknown prompt shield '{options.Provider}'."),
             };

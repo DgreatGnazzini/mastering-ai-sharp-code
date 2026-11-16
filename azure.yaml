@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+# The Azure Developer CLI's description of PriorAuthBot (chapter 14).
+#   azd auth login
+#   azd env new dev && azd env set AZURE_RESOURCE_GROUP rg-priorauthbot-dev && azd env set PRIORAUTHBOT_API_CLIENT_ID <appId>
+#   azd up
+# `azd up` is for a developer's own environment. Production is deployed only by .github/workflows/deploy.yml.
+name: priorauthbot
+infra:
+  provider: bicep
+  path: infra
+  module: main
+services:
+  api:
+    project: src/PriorAuthBot.Api
+    language: dotnet
+    host: containerapp
+    docker:
+      path: Dockerfile
+      context: ../..

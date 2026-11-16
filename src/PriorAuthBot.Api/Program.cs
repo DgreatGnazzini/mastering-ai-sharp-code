@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using PriorAuthBot.Api;
 using PriorAuthBot.Api.Agents;
 using PriorAuthBot.Api.Auth;
+using PriorAuthBot.Api.Hosting;
 using PriorAuthBot.Api.Ingestion;
 using PriorAuthBot.Api.Mcp;
 using PriorAuthBot.Api.Observability;
@@ -17,44 +18,32 @@ using PriorAuthBot.Core.Tools;
 using PriorAuthBot.Core;
 using PriorAuthBot.Core.AI;
 using PriorAuthBot.Core.Classification;
+using PriorAuthBot.Core.Hosting;
 using PriorAuthBot.Core.Identity;
 using PriorAuthBot.Core.Intake;
 using PriorAuthBot.Core.Rag;
 using PriorAuthBot.Core.Retrieval;
 using PriorAuthBot.Core.Search;
 
+// Chapter 14: the migration job runs the same image with one argument, prepares the database, and exits.
+if (args is ["migrate", ..])
+{
+    return await MigrateCommand.RunAsync(args[1..]);
+}
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Chapter 14: every setting that is a defect outside Development, checked before anything starts.
+ProductionReadiness.EnsureReady(builder.Configuration, builder.Environment.EnvironmentName);
+
+// Chapter 14: the app's one Azure credential (its managed identity in Azure), shared by every client.
+builder.Services.AddSingleton(AzureIdentity.CreateCredential(AzureIdentity.Options(builder.Configuration)));
 
 builder.Services.AddPriorAuthBot(builder.Configuration);
 builder.Services.AddProblemDetails();
 
 // Chapter 13: traces, metrics, and logs, exported over OTLP when an endpoint is configured (Aspire does that).
 builder.AddPriorAuthBotTelemetry();
-
-// Chapter 12: the guardrails can be switched off only on a developer's machine.
-if (!builder.Configuration.GetValue("Security:Guardrails", true) && !builder.Environment.IsDevelopment())
-{
-    throw new InvalidOperationException("Security:Guardrails can be false only in the Development environment.");
-}
-
-// Chapter 13: three settings that are fine on a laptop and a breach in production.
-if (!builder.Environment.IsDevelopment())
-{
-    if (builder.Configuration.GetValue<bool>("Telemetry:CaptureMessageContent"))
-    {
-        throw new InvalidOperationException("Telemetry:CaptureMessageContent can be true only in the Development environment: traces would carry prompts and answers, which can hold PHI.");
-    }
-
-    if (builder.Configuration["Logging:LogLevel:Microsoft.Extensions.AI"] is { } aiLevel && aiLevel.Equals("Trace", StringComparison.OrdinalIgnoreCase))
-    {
-        throw new InvalidOperationException("Logging for Microsoft.Extensions.AI can be Trace only in the Development environment: at Trace, LoggingChatClient logs every message.");
-    }
-
-    if ((builder.Configuration["Audit:Store"] ?? "InMemory") == "InMemory")
-    {
-        throw new InvalidOperationException("Audit:Store must be a durable, append-only store (Postgres) outside the Development environment.");
-    }
-}
 
 // Ingestion runs in the background and keeps the index in sync with the documents (chapter 7).
 builder.Services.AddOptions<IngestionWorkerOptions>().Bind(builder.Configuration.GetSection(IngestionWorkerOptions.SectionName));
@@ -125,10 +114,27 @@ else
     });
 }
 
-// Chapter 13: only the audit reader app role may read the audit log.
-builder.Services.AddAuthorization(options => options.AddPolicy(ObservabilityEndpoints.AuditReaderPolicy, policy => policy
-    .RequireAuthenticatedUser()
-    .RequireRole(builder.Configuration["Audit:ReaderRole"] ?? "PriorAuthBot.AuditReader")));
+// Chapter 14: a signed-in user of the tenant is not enough. PriorAuthBot's app registration requires
+// assignment, and every endpoint requires the app role that assignment grants, so a token for
+// someone who was never given access (or whose access was removed) gets a 403.
+const string UserPolicy = "PriorAuthBotUser";
+var requiredRole = builder.Configuration["Auth:RequiredRole"];
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(UserPolicy, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        if (!string.IsNullOrWhiteSpace(requiredRole))
+        {
+            policy.RequireRole(requiredRole);
+        }
+    });
+
+    // Chapter 13: only the audit reader app role may read the audit log.
+    options.AddPolicy(ObservabilityEndpoints.AuditReaderPolicy, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(builder.Configuration["Audit:ReaderRole"] ?? "PriorAuthBot.AuditReader"));
+});
 builder.Services.AddSingleton<AuditEndpointFilter>();
 
 // Chapter 10: tools for the signed-in user, and the MCP servers PriorAuthBot may start. A stdio
@@ -177,6 +183,9 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+// Chapter 14: liveness and readiness probes for Azure Container Apps.
+builder.Services.AddPriorAuthBotHealthChecks();
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -197,9 +206,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapGet("/ui", (IWebHostEnvironment environment) => Results.File(Path.Combine(environment.ContentRootPath, "ui", "index.html"), "text/html; charset=utf-8"));
 }
-app.MapGet("/health", () => Results.Ok("healthy"));
+app.MapPriorAuthBotHealth();
 
-var api = app.MapGroup("/").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);
+var api = app.MapGroup("/").RequireAuthorization(UserPolicy).RequireRateLimiting(UserRateLimitOptions.PolicyName);
 
 // Chapter 13: one audit record per request, for every endpoint in the group, before the response goes back.
 api.AddEndpointFilter<AuditEndpointFilter>();
@@ -273,8 +282,9 @@ api.MapAgents();
 api.MapObservability();
 
 // Chapter 10: the MCP endpoint, behind the same sign-in and per-user rate limit as everything else.
-app.MapMcp("/mcp").RequireAuthorization().RequireRateLimiting(UserRateLimitOptions.PolicyName);
+app.MapMcp("/mcp").RequireAuthorization(UserPolicy).RequireRateLimiting(UserRateLimitOptions.PolicyName);
 
 await app.RunAsync();
+return 0;
 
 public partial class Program;

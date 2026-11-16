@@ -1,0 +1,50 @@
+# Chapter 14: put all traffic back on an earlier revision, in about a minute. Earlier revisions stay
+# deployed (inactive revisions are kept), and each one still names the model deployment it was
+# tested with, so rolling back the revision also rolls back the model version.
+name: Roll back
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: The revision to send all traffic to, such as ca-priorauthbot-prod-api--r1a2b3c4. Empty means the one before the current.
+        required: false
+        default: ''
+      reason:
+        description: Why. Kept with the run.
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+    env:
+      RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+      TARGET: ${{ inputs.revision }}
+      REASON: ${{ inputs.reason }}
+    steps:
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Send all traffic to the earlier revision
+        run: |
+          app=$(az containerapp list -g "$RG" --query "[?tags.\"azd-service-name\"=='api'].name | [0]" -o tsv)
+          current=$(az containerapp ingress traffic show -g "$RG" -n "$app" --query "[?weight==\`100\`].revisionName | [0]" -o tsv)
+          if [ -z "$TARGET" ]; then
+            TARGET=$(az containerapp revision list -g "$RG" -n "$app" --all --query "sort_by([?name!='$current'], &properties.createdTime)[-1].name" -o tsv)
+          fi
+          az containerapp revision activate -g "$RG" -n "$app" --revision "$TARGET" -o none || true
+          az containerapp ingress traffic set -g "$RG" -n "$app" --revision-weight "$TARGET=100" -o none
+          echo "Rolled back from $current to $TARGET by ${GITHUB_ACTOR}: $REASON" | tee -a "$GITHUB_STEP_SUMMARY"

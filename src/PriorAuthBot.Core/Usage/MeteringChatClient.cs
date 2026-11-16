@@ -32,9 +32,9 @@ public sealed partial class MeteringChatClient(
     public override async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var list = messages as IList<ChatMessage> ?? [.. messages];
-        var estimate = CheckBudget(list, options);
+        var estimate = await CheckBudgetAsync(list, options, cancellationToken).ConfigureAwait(false);
         var response = await base.GetResponseAsync(list, options, cancellationToken).ConfigureAwait(false);
-        Charge(response.Usage, estimate, response.Text, response.ModelId ?? options?.ModelId);
+        await ChargeAsync(response.Usage, estimate, response.Text, response.ModelId ?? options?.ModelId, cancellationToken).ConfigureAwait(false);
         return response;
     }
 
@@ -42,7 +42,7 @@ public sealed partial class MeteringChatClient(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var list = messages as IList<ChatMessage> ?? [.. messages];
-        var estimate = CheckBudget(list, options);
+        var estimate = await CheckBudgetAsync(list, options, cancellationToken).ConfigureAwait(false);
         UsageDetails? usage = null;
         string? model = null;
         var text = new System.Text.StringBuilder();
@@ -59,10 +59,10 @@ public sealed partial class MeteringChatClient(
             yield return update;
         }
 
-        Charge(usage, estimate, text.ToString(), model ?? options?.ModelId);
+        await ChargeAsync(usage, estimate, text.ToString(), model ?? options?.ModelId, cancellationToken).ConfigureAwait(false);
     }
 
-    private long CheckBudget(IList<ChatMessage> messages, ChatOptions? chatOptions)
+    private async ValueTask<long> CheckBudgetAsync(IList<ChatMessage> messages, ChatOptions? chatOptions, CancellationToken cancellationToken)
     {
         var estimate = (long)tokens.Count(string.Join("\n", messages.Select(m => m.Text))) + tokens.Count(chatOptions?.Instructions ?? string.Empty);
         var request = AiRequestContext.Current;
@@ -73,7 +73,7 @@ public sealed partial class MeteringChatClient(
         }
 
         var limit = settings.DailyLimitFor(request.Groups);
-        var used = ledger.ForUser(request.UserId).TotalTokens;
+        var used = (await ledger.ForUserAsync(request.UserId, cancellationToken).ConfigureAwait(false)).TotalTokens;
 
         // Refuse when the budget is spent, or when this call's input alone would go over it, so one
         // enormous prompt cannot overdraw the day.
@@ -87,7 +87,7 @@ public sealed partial class MeteringChatClient(
         return estimate;
     }
 
-    private void Charge(UsageDetails? usage, long estimatedInput, string outputText, string? model)
+    private async ValueTask ChargeAsync(UsageDetails? usage, long estimatedInput, string outputText, string? model, CancellationToken cancellationToken)
     {
         var input = usage?.InputTokenCount ?? estimatedInput;
         var output = usage?.OutputTokenCount ?? tokens.Count(outputText);
@@ -104,9 +104,10 @@ public sealed partial class MeteringChatClient(
         Activity.Current?.SetTag("priorauthbot.cost_usd", (double)cost);
 
         request?.RecordUsage(input, output, cost);
-        foreach (var threshold in ledger.Charge(request?.UserId ?? BackgroundUser, input, output, cost))
+        // CancellationToken.None: the model has already been paid for, so the charge is recorded even if the caller has gone.
+        foreach (var threshold in await ledger.ChargeAsync(request?.UserId ?? BackgroundUser, input, output, cost, CancellationToken.None).ConfigureAwait(false))
         {
-            var today = ledger.Today();
+            var today = await ledger.TodayAsync(cancellationToken).ConfigureAwait(false);
             PriorAuthBotTelemetry.SpendAlerts.Add(1, new KeyValuePair<string, object?>("priorauthbot.spend.threshold", threshold));
             LogSpendAlert(logger, threshold, today.Cost, options.CurrentValue.DailySpendAlertUsd);
         }

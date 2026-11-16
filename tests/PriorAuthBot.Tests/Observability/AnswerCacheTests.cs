@@ -177,7 +177,7 @@ public sealed class AnswerCacheTests
         Assert.Contains(cached.Documents, d => d.DocumentId == "sepsis-screening-protocol" && d.Access == AccessKind.Cited);
     }
 
-    private static int ModelCalls(RagTestHost host) => host.Get<ITokenLedger>().Today().ModelCalls;
+    private static int ModelCalls(RagTestHost host) => ((InMemoryTokenLedger)host.Get<ITokenLedger>()).Today().ModelCalls;
 
     private static async Task<RagTestHost> HostAsync(double threshold = 0.97)
     {

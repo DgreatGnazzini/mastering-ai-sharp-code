@@ -1,0 +1,316 @@
+# Chapter 14: PriorAuthBot's release pipeline. It deploys a commit to production only after CI passed
+# on that commit (build, tests, the offline eval gate, the live Ollama eval and red-team gates, the
+# secret scan, and the container scan), a person in the "production" environment approved it, and
+# the new revision passed a smoke test, the eval suite against its model deployment, and a canary.
+#
+# Every third-party action is pinned to a commit SHA: a tag can be moved to malicious code, and in
+# March 2025 the tags of a widely used action were. Dependabot proposes new SHAs.
+#
+# The workflow does nothing until the repository variables from infra/bootstrap/github-oidc.sh are set.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      override_reason:
+        description: Deploy although a CI gate failed on this commit. Needs approval in the production-override environment, and the reason is kept with the run.
+        required: false
+        default: ''
+
+# Nothing by default. Each job asks for what it uses.
+permissions: {}
+
+# One release at a time, and never cancel one halfway through a canary.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  gates:
+    name: Check the CI gates for this commit
+    if: vars.AZURE_CLIENT_ID != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+      passed: ${{ steps.check.outputs.passed }}
+      override: ${{ steps.check.outputs.override }}
+    steps:
+      - name: Which commit
+        id: commit
+        run: echo "sha=${{ github.event.workflow_run.head_sha || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Every required check passed on it
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.commit.outputs.sha }}
+          OVERRIDE_REASON: ${{ inputs.override_reason }}
+        run: |
+          required=(
+            "Build and test (ubuntu-latest)"
+            "Integration (PostgreSQL + pgvector)"
+            "RAG eval (golden set on Ollama)"
+            "Secret scan"
+            "Container image (build, scan, SBOM, smoke test)"
+            "Infrastructure (Bicep build and lint)"
+          )
+          runs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?per_page=100" --jq '.check_runs | map({name, conclusion})')
+          failed=0
+          for name in "${required[@]}"; do
+            conclusion=$(jq -r --arg n "$name" 'map(select(.name == $n)) | .[0].conclusion // "missing"' <<< "$runs")
+            echo "$name: $conclusion" | tee -a "$GITHUB_STEP_SUMMARY"
+            [ "$conclusion" = "success" ] || failed=1
+          done
+          if [ "$failed" = 0 ]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"; echo "override=false" >> "$GITHUB_OUTPUT"
+          elif [ -n "$OVERRIDE_REASON" ]; then
+            echo "::warning::Gates failed; override requested by ${GITHUB_ACTOR}: ${OVERRIDE_REASON}"
+            echo "**Override requested by ${GITHUB_ACTOR}:** ${OVERRIDE_REASON}" >> "$GITHUB_STEP_SUMMARY"
+            echo "passed=false" >> "$GITHUB_OUTPUT"; echo "override=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::A required check did not pass on ${SHA}. Nothing is deployed."
+            exit 1
+          fi
+
+  override:
+    # Only the security lead is a reviewer of this environment, and they cannot approve their own run.
+    name: Approve the gate override
+    needs: gates
+    if: needs.gates.outputs.override == 'true'
+    runs-on: ubuntu-latest
+    environment: production-override
+    permissions: {}
+    steps:
+      - run: echo "Gate override approved for ${{ needs.gates.outputs.sha }}. Reason ${{ toJSON(inputs.override_reason) }}." >> "$GITHUB_STEP_SUMMARY"
+
+  image:
+    name: Build, scan, and attest the images
+    needs: [gates, override]
+    if: always() && needs.gates.result == 'success' && (needs.gates.outputs.passed == 'true' || needs.override.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write     # signs the attestation with GitHub's OIDC identity (Sigstore), not for Azure
+      attestations: write
+    env:
+      SHA: ${{ needs.gates.outputs.sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ needs.gates.outputs.sha }}
+          persist-credentials: false
+
+      - name: Build the API and eval images
+        run: |
+          docker build -f src/PriorAuthBot.Api/Dockerfile --build-arg REVISION="${SHA::7}" -t "priorauthbot-api:${SHA::7}" .
+          docker build -f eval/PriorAuthBot.Eval/Dockerfile -t "priorauthbot-eval:${SHA::7}" .
+
+      # The scanner and SBOM tool run as images pinned by digest, like the base images.
+      - name: Scan for vulnerabilities (HIGH or CRITICAL with a fix fails the release)
+        run: |
+          for image in priorauthbot-api priorauthbot-eval; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+              image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress "$image:${SHA::7}"
+          done
+
+      - name: Software bill of materials (SPDX)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/out \
+            anchore/syft:v1.57.1@sha256:03215d0e98b661d0ecbc8575dbc14d65be1743b5de5df6410aecb7e80f95b060 \
+            "priorauthbot-api:${SHA::7}" -o spdx-json=/out/sbom.spdx.json
+          docker save "priorauthbot-api:${SHA::7}" "priorauthbot-eval:${SHA::7}" -o images.tar
+
+      # Provenance: which workflow, on which commit, built these bytes. Signed and kept with the
+      # repository; `gh attestation verify images.tar -R <owner>/<repo>` checks it.
+      - name: Attest provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: images.tar
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ needs.gates.outputs.sha }}
+          path: |
+            images.tar
+            sbom.spdx.json
+          retention-days: 30
+
+  deploy:
+    name: Deploy to production with a canary
+    needs: [gates, image]
+    if: always() && needs.image.result == 'success'
+    runs-on: ubuntu-latest
+    # Required reviewers approve here. The OIDC subject is repo:<owner>/<repo>:environment:production,
+    # the only subject the Azure identity trusts, so no other job, branch, or fork can sign in.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHA: ${{ needs.gates.outputs.sha }}
+      RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ needs.gates.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-${{ needs.gates.outputs.sha }}
+
+      - name: Sign in to Azure with OpenID Connect (no secret)
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What is running now
+        id: current
+        run: |
+          app=$(az containerapp list -g "$RG" --query "[?tags.\"azd-service-name\"=='api'].name | [0]" -o tsv)
+          if [ -n "$app" ]; then
+            stable=$(az containerapp ingress traffic show -g "$RG" -n "$app" --query "[?weight==\`100\`].revisionName | [0]" -o tsv)
+            [ -n "$stable" ] || stable=$(az containerapp show -g "$RG" -n "$app" --query properties.latestReadyRevisionName -o tsv)
+            image=$(az containerapp revision show -g "$RG" -n "$app" --revision "$stable" --query properties.template.containers[0].image -o tsv)
+            deployment=$(az containerapp revision show -g "$RG" -n "$app" --revision "$stable" --query "properties.template.containers[0].env[?name=='AI__AzureOpenAI__ChatDeployment'].value | [0]" -o tsv)
+          fi
+          {
+            echo "app=$app"; echo "stable=$stable"; echo "image=$image"; echo "deployment=$deployment"
+          } >> "$GITHUB_OUTPUT"
+          echo "Stable revision: ${stable:-none} (${image:-no image}, ${deployment:-no model})" >> "$GITHUB_STEP_SUMMARY"
+
+      # The template runs with what is live now (image, model, and traffic pinned to the stable
+      # revision), so provisioning never changes what users get. The release itself is the canary below.
+      # On the very first release there is nothing live, so the registry is created first, the image
+      # pushed, and only then the apps.
+      - name: Provision the infrastructure (Bicep)
+        id: infra
+        env:
+          STABLE: ${{ steps.current.outputs.stable }}
+          STABLE_IMAGE: ${{ steps.current.outputs.image }}
+          STABLE_DEPLOYMENT: ${{ steps.current.outputs.deployment }}
+        run: |
+          deployment=${STABLE_DEPLOYMENT:-$(jq -r .chatDeployment infra/release.json)}
+          params=(environmentName="${{ vars.AZURE_ENV_NAME }}" apiClientId="${{ vars.PRIORAUTHBOT_API_CLIENT_ID }}" chatDeployment="$deployment" stableRevision="$STABLE")
+          if [ -z "$STABLE_IMAGE" ]; then
+            registry=$(az deployment group create -g "$RG" -n registry -f infra/modules/registry.bicep \
+              -p location="${{ vars.AZURE_LOCATION }}" tags='{}' name="cr${{ vars.AZURE_ENV_NAME }}$(echo -n "$RG" | sha1sum | cut -c1-8)" pullPrincipalIds='[]' \
+              --query properties.outputs.loginServer.value -o tsv)
+            az acr login --name "${registry%%.*}"
+            docker load -i images.tar
+            docker tag "priorauthbot-api:${SHA::7}" "$registry/priorauthbot-api:${SHA::7}"
+            docker push "$registry/priorauthbot-api:${SHA::7}"
+            STABLE_IMAGE="$registry/priorauthbot-api:${SHA::7}"
+          fi
+          az deployment group create -g "$RG" -n main -f infra/main.bicep -p "${params[@]}" apiImage="$STABLE_IMAGE" \
+            --query properties.outputs -o json > outputs.json
+          for key in AZURE_CONTAINER_REGISTRY_ENDPOINT AZURE_CONTAINER_REGISTRY_NAME API_APP_NAME CONTAINER_APPS_ENVIRONMENT_DOMAIN MIGRATE_JOB_NAME EVAL_JOB_NAME AZURE_OPENAI_ENDPOINT EVAL_MANAGED_IDENTITY_CLIENT_ID LOG_ANALYTICS_WORKSPACE_GUID EMBEDDING_DEPLOYMENT; do
+            echo "$key=$(jq -r ".${key}.value" outputs.json)" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Push the images
+        id: push
+        env:
+          REGISTRY: ${{ steps.infra.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT }}
+        run: |
+          az acr login --name "${{ steps.infra.outputs.AZURE_CONTAINER_REGISTRY_NAME }}"
+          docker load -i images.tar
+          for image in priorauthbot-api priorauthbot-eval; do
+            docker tag "$image:${SHA::7}" "$REGISTRY/$image:${SHA::7}"
+            docker push "$REGISTRY/$image:${SHA::7}"
+          done
+          echo "api=$REGISTRY/priorauthbot-api:${SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "eval=$REGISTRY/priorauthbot-eval:${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # Schema changes run before the new revision starts, as the database administrator identity.
+      # The stable revision keeps running against the migrated schema, so every migration must be
+      # backward compatible: add columns and tables, never rename or drop in the same release.
+      - name: Migrate the database
+        run: scripts/deploy/run-job.sh "$RG" "${{ steps.infra.outputs.MIGRATE_JOB_NAME }}" "${{ steps.push.outputs.api }}"
+
+      - name: Start the canary revision (no traffic)
+        id: canary
+        env:
+          APP: ${{ steps.infra.outputs.API_APP_NAME }}
+          STABLE: ${{ steps.current.outputs.stable }}
+        run: |
+          deployment=$(jq -r .chatDeployment infra/release.json)
+          if [ -n "$STABLE" ]; then
+            az containerapp ingress traffic set -g "$RG" -n "$APP" --revision-weight "$STABLE=100" -o none
+          fi
+          az containerapp update -g "$RG" -n "$APP" --image "${{ steps.push.outputs.api }}" --revision-suffix "r${SHA::7}" \
+            --set-env-vars "AI__AzureOpenAI__ChatDeployment=$deployment" "PriorAuthBot__Revision=${SHA::7}" -o none
+          revision="$APP--r${SHA::7}"
+          az containerapp revision label add -g "$RG" -n "$APP" --label canary --revision "$revision" --no-prompt -o none
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
+          echo "url=https://$APP---canary.${{ steps.infra.outputs.CONTAINER_APPS_ENVIRONMENT_DOMAIN }}/" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test the canary, from inside the network
+        run: |
+          scripts/deploy/run-job.sh "$RG" "${{ steps.infra.outputs.EVAL_JOB_NAME }}" "${{ steps.push.outputs.eval }}" \
+            "PRIORAUTHBOT_EVAL_ARGS=--smoke ${{ steps.canary.outputs.url }} --expect-revision ${SHA::7} --wait 600"
+
+      # The eval suite and the red-team attacks against the model deployment the canary uses. For a
+      # code change it is the same deployment as before; for a model rollout it is the new one.
+      - name: Eval and red-team gates against the canary's model deployment
+        run: |
+          scripts/deploy/run-job.sh "$RG" "${{ steps.infra.outputs.EVAL_JOB_NAME }}" "${{ steps.push.outputs.eval }}" \
+            "AZURE_CLIENT_ID=${{ steps.infra.outputs.EVAL_MANAGED_IDENTITY_CLIENT_ID }}" \
+            "AZURE_TENANT_ID=${{ vars.AZURE_TENANT_ID }}" \
+            "PRIORAUTHBOT_EVAL_AZURE_OPENAI_ENDPOINT=${{ steps.infra.outputs.AZURE_OPENAI_ENDPOINT }}" \
+            "PRIORAUTHBOT_EVAL_CHAT_DEPLOYMENT=${{ steps.canary.outputs.deployment }}" \
+            "PRIORAUTHBOT_EVAL_EMBEDDING_DEPLOYMENT=${{ steps.infra.outputs.EMBEDDING_DEPLOYMENT }}" \
+            "PRIORAUTHBOT_EVAL_ARGS=--provider AzureOpenAI --answers --redteam --execution ${SHA::7}"
+
+      - name: Send part of the traffic to the canary and watch it
+        env:
+          APP: ${{ steps.infra.outputs.API_APP_NAME }}
+          STABLE: ${{ steps.current.outputs.stable }}
+          CANARY: ${{ steps.canary.outputs.revision }}
+        run: |
+          percent=$(jq -r .canaryPercent infra/release.json)
+          minutes=$(jq -r .canaryMinutes infra/release.json)
+          if [ -z "$STABLE" ]; then
+            echo "First release: no stable revision to compare with."; exit 0
+          fi
+          az containerapp ingress traffic set -g "$RG" -n "$APP" --revision-weight "$STABLE=$((100 - percent))" "$CANARY=$percent" -o none
+          sleep $((minutes * 60))
+          scripts/deploy/canary-health.sh "${{ steps.infra.outputs.LOG_ANALYTICS_WORKSPACE_GUID }}" "$CANARY" "$STABLE" "$minutes" "$(jq -r .maxCanaryFailureRate infra/release.json)"
+
+      - name: Promote the canary
+        env:
+          APP: ${{ steps.infra.outputs.API_APP_NAME }}
+          CANARY: ${{ steps.canary.outputs.revision }}
+        run: |
+          az containerapp ingress traffic set -g "$RG" -n "$APP" --revision-weight "$CANARY=100" -o none
+          az containerapp revision label remove -g "$RG" -n "$APP" --label canary --no-prompt -o none || true
+          echo "Released ${SHA::7} as $CANARY with model deployment ${{ steps.canary.outputs.deployment }}." >> "$GITHUB_STEP_SUMMARY"
+
+      # Any failure after the canary started: all traffic back to the stable revision, which never
+      # stopped running, and the canary deactivated. Users see nothing.
+      - name: Roll back
+        if: failure() && steps.canary.outputs.revision != ''
+        env:
+          APP: ${{ steps.infra.outputs.API_APP_NAME }}
+          STABLE: ${{ steps.current.outputs.stable }}
+          CANARY: ${{ steps.canary.outputs.revision }}
+        run: |
+          if [ -n "$STABLE" ]; then
+            az containerapp ingress traffic set -g "$RG" -n "$APP" --revision-weight "$STABLE=100" -o none
+          fi
+          az containerapp revision deactivate -g "$RG" -n "$APP" --revision "$CANARY" -o none || true
+          echo "::error::Release ${SHA::7} failed and was rolled back to ${STABLE:-nothing}."

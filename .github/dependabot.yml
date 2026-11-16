@@ -1,0 +1,11 @@
+# Chapter 14: pull requests for new versions of the things the pipeline pins by digest or SHA.
+# NuGet packages are watched by the weekly latest-packages workflow instead (chapter 15), because a
+# package change is a chapter-level decision in this repository.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directories: [/src/PriorAuthBot.Api, /eval/PriorAuthBot.Eval]
+    schedule: { interval: weekly }

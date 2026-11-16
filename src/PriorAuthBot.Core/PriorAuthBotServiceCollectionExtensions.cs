@@ -1,5 +1,5 @@
 using Azure.AI.DocumentIntelligence;
-using Azure.Identity;
+using PriorAuthBot.Core.Hosting;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,7 +84,15 @@ public static class PriorAuthBotServiceCollectionExtensions
     public static IServiceCollection AddPriorAuthBotTools(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<HrApiOptions>().Bind(configuration.GetSection(HrApiOptions.SectionName));
-        services.AddOptions<DownstreamApiOptions>().Bind(configuration.GetSection(DownstreamApiOptions.SectionName));
+        services.AddOptions<DownstreamApiOptions>().Bind(configuration.GetSection(DownstreamApiOptions.SectionName))
+
+            // Chapter 14: the app's one managed identity and tenant, unless the on-behalf-of flow names its own.
+            .PostConfigure(options =>
+            {
+                var azure = AzureIdentity.Options(configuration);
+                options.ManagedIdentityClientId ??= azure.ManagedIdentityClientId;
+                options.TenantId ??= azure.TenantId;
+            });
         services.AddOptions<McpOptions>().Bind(configuration.GetSection(McpOptions.SectionName));
 
         services.TryAddSingleton<IDownstreamTokenProvider, OnBehalfOfTokenProvider>();
@@ -115,7 +123,7 @@ public static class PriorAuthBotServiceCollectionExtensions
             "Vision" => new VisionOcrService(sp.GetRequiredKeyedService<IChatClient>(AiServiceCollectionExtensions.VisionKey)),
             "DocumentIntelligence" => new DocumentIntelligenceOcrService(new DocumentIntelligenceClient(
                 documents.DocumentIntelligenceEndpoint ?? throw new InvalidOperationException("Documents:DocumentIntelligenceEndpoint is not set."),
-                new DefaultAzureCredential())),
+                sp.AzureCredential())),
             _ => throw new InvalidOperationException($"Unknown OCR option '{documents.Ocr}'."),
         };
     }
