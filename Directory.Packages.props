@@ -1,0 +1,55 @@
+<Project>
+  <!--
+    Every package version used in the book is pinned here (Central Package Management).
+    Projects reference packages without a Version attribute.
+    Versions were checked on nuget.org on 2026-11-13. Update them only between chapter tags,
+    and note any change in the release notes for that tag.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup Label="AI abstractions and providers (ch01-ch04)">
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="11.0.0" />
+    <PackageVersion Include="OpenAI" Version="2.15.0" />
+    <PackageVersion Include="OllamaSharp" Version="5.5.2" />
+    <PackageVersion Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="Vector data and retrieval (ch05-ch08)">
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="11.0.0" />
+    <!-- The vector store connectors are still preview packages. -->
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.74.0-preview" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.74.0-preview" />
+  </ItemGroup>
+  <ItemGroup Label="Agents (ch09-ch10)">
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.28.0" />
+  </ItemGroup>
+  <ItemGroup Label="Evaluation (ch12)">
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Quality" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Evaluation.Reporting" Version="11.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="Observability, caching, hosting (ch13)">
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.21.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="Azure (ch14)">
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.12.0" />
+  </ItemGroup>
+  <ItemGroup Label="Local models (ch15)">
+    <PackageVersion Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.19.0" />
+  </ItemGroup>
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+</Project>
